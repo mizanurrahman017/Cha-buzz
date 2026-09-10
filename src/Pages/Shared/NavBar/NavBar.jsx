@@ -4,17 +4,22 @@ import {
   FaShoppingCart,
   FaCoffee,
 } from "react-icons/fa";
+import { Link } from "react-router";
+import { useCart } from "../../../Contexts/CartContext";
 
 const NavBar = () => {
   const [search, setSearch] = useState("");
   const [language, setLanguage] = useState("EN");
+
+  // CartContext থেকে cartCount নিচ্ছি
+  const { cartCount } = useCart();
 
   const isBangla = language === "BN";
 
   const handleSearch = (e) => {
     setSearch(e.target.value);
 
-    // পরে Menu-এর food search-এর সাথে connect করবো
+    // পরে Home-এর food search-এর সাথে connect করবো
     console.log("Search:", e.target.value);
   };
 
@@ -28,8 +33,10 @@ const NavBar = () => {
         <div className="min-h-20 flex items-center justify-between gap-4">
 
           {/* ================= LOGO ================= */}
-          <div className="flex items-center gap-3 shrink-0">
-
+          <Link
+            to="/"
+            className="flex items-center gap-3 shrink-0"
+          >
             <div className="w-11 h-11 rounded-full bg-[#252525] text-[#F7F5EF] flex items-center justify-center">
               <FaCoffee className="text-lg" />
             </div>
@@ -40,14 +47,15 @@ const NavBar = () => {
               </h1>
 
               <p className="text-[9px] sm:text-[10px] tracking-[0.2em] text-[#8A806B]">
-                {isBangla ? "ক্যাফে ও রেস্টুরেন্ট" : "CAFE & RESTAURANT"}
+                {isBangla
+                  ? "ক্যাফে ও রেস্টুরেন্ট"
+                  : "CAFE & RESTAURANT"}
               </p>
             </div>
-          </div>
+          </Link>
 
           {/* ================= SEARCH ================= */}
           <div className="hidden sm:flex flex-1 max-w-md relative">
-
             <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8A806B]" />
 
             <input
@@ -125,7 +133,11 @@ const NavBar = () => {
                 items-center
                 gap-2
               "
-              title={isBangla ? "Switch to English" : "বাংলায় পরিবর্তন করুন"}
+              title={
+                isBangla
+                  ? "Switch to English"
+                  : "বাংলায় পরিবর্তন করুন"
+              }
             >
               <span className={!isBangla ? "text-[#A08E65]" : ""}>
                 EN
@@ -139,7 +151,8 @@ const NavBar = () => {
             </button>
 
             {/* ================= CART ================= */}
-            <button
+            <Link
+              to="/cart"
               className="
                 relative
                 w-10
@@ -159,14 +172,15 @@ const NavBar = () => {
             >
               <FaShoppingCart className="text-sm sm:text-base" />
 
-              {/* Cart Count */}
+              {/* Dynamic Cart Count */}
               <span
                 className="
                   absolute
                   -top-1
                   -right-1
-                  w-5
+                  min-w-5
                   h-5
+                  px-1
                   rounded-full
                   bg-[#A08E65]
                   text-white
@@ -177,16 +191,15 @@ const NavBar = () => {
                   justify-center
                 "
               >
-                0
+                {cartCount}
               </span>
-            </button>
+            </Link>
 
           </div>
         </div>
 
         {/* ================= MOBILE SEARCH ================= */}
         <div className="sm:hidden pb-4">
-
           <div className="relative">
 
             <FaSearch
@@ -229,7 +242,6 @@ const NavBar = () => {
             />
 
           </div>
-
         </div>
       </div>
     </nav>

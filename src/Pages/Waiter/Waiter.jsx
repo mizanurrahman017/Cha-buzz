@@ -14,7 +14,7 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 
-import foods from "../../data/foods";
+import foods from "../../Data/foods";
 import { useWaiterOrder } from "../../Context/WaiterOrderContext";
 import { db } from "../../Firebase/Firebase.config";
 

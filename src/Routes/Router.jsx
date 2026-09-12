@@ -12,6 +12,7 @@ import Orders from "../Pages/Admin/Order/Orders";
 import AdminRoute from "./AdminRoute";
 import Login from "../Pages/Auth/Login/Login";
 import Waiter from "../Pages/Waiter/Waiter";
+import WaiterRoute from "./WaiterRoute";
 
 
 export const router = createBrowserRouter([
@@ -52,7 +53,16 @@ export const router = createBrowserRouter([
           </AdminRoute>
         ),
       },
-      
+      {
+        path: "waiter",
+
+        element: (
+          <WaiterRoute>
+            <Waiter />
+          </WaiterRoute>
+        ),
+      },
+
 
     ],
   },

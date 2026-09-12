@@ -5,234 +5,314 @@ import {
   FaMinus,
   FaTrash,
   FaClipboardList,
+  FaSave,
 } from "react-icons/fa";
 
+import {
+  addDoc,
+  collection,
+  serverTimestamp,
+} from "firebase/firestore";
+
 import foods from "../../data/foods";
-import { useCart } from "../../Contexts/CartContext";
+import { useWaiterOrder } from "../../Context/WaiterOrderContext";
+import { db } from "../../Firebase/Firebase.config";
 
 const Waiter = () => {
   const [search, setSearch] = useState("");
-  const [customerName, setCustomerName] = useState("");
-  const [customerPhone, setCustomerPhone] = useState("");
+  const [activeCategory, setActiveCategory] = useState("All");
+  const [saving, setSaving] = useState(false);
 
   const {
-    cartItems,
+    orderItems,
     totalPrice,
-    addToCart,
-    increaseQuantity,
-    decreaseQuantity,
-    removeFromCart,
-  } = useCart();
+    totalItems,
+    addToWaiterOrder,
+    increaseWaiterQuantity,
+    decreaseWaiterQuantity,
+    removeFromWaiterOrder,
+    clearWaiterOrder,
+  } = useWaiterOrder();
 
-  // Search food
+  const categories = [
+    "All",
+    ...new Set(foods.map((food) => food.category)),
+  ];
+
   const filteredFoods = useMemo(() => {
-    return foods.filter((food) =>
-      food.name.toLowerCase().includes(search.toLowerCase())
-    );
-  }, [search]);
+    return foods.filter((food) => {
+      const matchesSearch = food.name
+        .toLowerCase()
+        .includes(search.toLowerCase());
 
-  const handlePlaceOrder = () => {
-    if (!customerName.trim()) {
-      alert("Please enter customer name.");
-      return;
-    }
+      const matchesCategory =
+        activeCategory === "All" ||
+        food.category === activeCategory;
 
-    if (!customerPhone.trim()) {
-      alert("Please enter customer phone number.");
-      return;
-    }
+      return matchesSearch && matchesCategory;
+    });
+  }, [search, activeCategory]);
 
-    if (cartItems.length === 0) {
+  // ================= SAVE WAITER ORDER TO FIRESTORE =================
+  const handleSaveOrder = async () => {
+    if (orderItems.length === 0) {
       alert("Please add at least one food.");
       return;
     }
 
-    // এখন শুধু test
-    console.log("Waiter Order:", {
-      customerName,
-      customerPhone,
-      items: cartItems,
-      total: totalPrice,
-    });
+    try {
+      setSaving(true);
 
-    alert("Order ready! Firestore connection will be added next.");
+      const orderData = {
+        items: orderItems.map((item) => ({
+          id: item.id,
+          name: item.name,
+          price: Number(item.price),
+          quantity: Number(item.quantity),
+          image: item.image || "",
+          category: item.category || "",
+        })),
 
-    setCustomerName("");
-    setCustomerPhone("");
+        total: Number(totalPrice),
+
+        orderSource: "waiter",
+
+        paymentMethod: "cash",
+
+        paymentStatus: "paid",
+
+        orderStatus: "completed",
+
+        createdAt: serverTimestamp(),
+      };
+
+      await addDoc(collection(db, "orders"), orderData);
+
+      alert("Order saved successfully!");
+
+      clearWaiterOrder();
+    } catch (error) {
+      console.error("Error saving waiter order:", error);
+
+      alert("Failed to save order. Please try again.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-[#F7F5EF] px-4 sm:px-6 lg:px-8 py-8">
+    <div className="min-h-screen bg-[#F7F5EF] py-6 sm:py-8">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6">
 
-      <div className="max-w-7xl mx-auto">
-
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center gap-3">
-
-            <div className="w-12 h-12 rounded-2xl bg-[#252525] text-white flex items-center justify-center">
-              <FaClipboardList size={20} />
-            </div>
+        {/* ================= HEADER ================= */}
+        <div className="mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
 
             <div>
+              <p className="text-sm font-semibold text-[#A08E65]">
+                Cha Buzz
+              </p>
+
               <h1 className="text-2xl sm:text-3xl font-extrabold text-[#252525]">
                 Waiter Panel
               </h1>
 
               <p className="text-sm text-[#8A806B] mt-1">
-                Create restaurant customer orders
+                Record today's restaurant orders digitally
               </p>
+            </div>
+
+            {/* Current order summary */}
+            <div className="bg-white border border-[#E4E0D7] rounded-2xl px-5 py-4 shadow-sm">
+              <div className="flex items-center gap-3">
+
+                <div className="w-10 h-10 rounded-xl bg-[#252525] text-white flex items-center justify-center">
+                  <FaClipboardList />
+                </div>
+
+                <div>
+                  <p className="text-xs text-[#8A806B]">
+                    Current Order
+                  </p>
+
+                  <p className="font-bold text-[#252525]">
+                    {totalItems} Items · ৳{totalPrice}
+                  </p>
+                </div>
+
+              </div>
             </div>
 
           </div>
         </div>
 
-        {/* Main Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6">
+        {/* ================= SEARCH ================= */}
+        <div className="bg-white border border-[#E4E0D7] rounded-2xl p-4 mb-5 shadow-sm">
 
-          {/* LEFT SIDE */}
-          <div>
+          <div className="relative">
 
-            {/* Customer Information */}
-            <div className="bg-white rounded-2xl border border-[#E4E0D7] p-5 sm:p-6 mb-6">
+            <FaSearch
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8A806B]"
+              size={14}
+            />
 
-              <h2 className="text-lg font-bold text-[#252525] mb-4">
-                Customer Information
-              </h2>
+            <input
+              type="text"
+              placeholder="Search food..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="
+                w-full h-11 pl-11 pr-4 rounded-xl
+                border border-[#D8D5CC]
+                outline-none
+                text-sm text-[#252525]
+                focus:border-[#252525]
+                bg-[#FAF9F5]
+              "
+            />
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
-                {/* Name */}
-                <div>
-                  <label className="block text-sm font-semibold text-[#252525] mb-2">
-                    Customer Name
-                  </label>
-
-                  <input
-                    type="text"
-                    value={customerName}
-                    onChange={(e) => setCustomerName(e.target.value)}
-                    placeholder="Enter customer name"
-                    className="w-full h-11 rounded-xl border border-[#D8D5CC] bg-[#FAF9F5] px-4 text-sm outline-none focus:border-[#252525] focus:ring-2 focus:ring-[#252525]/10"
-                  />
-                </div>
-
-                {/* Phone */}
-                <div>
-                  <label className="block text-sm font-semibold text-[#252525] mb-2">
-                    Phone Number
-                  </label>
-
-                  <input
-                    type="tel"
-                    value={customerPhone}
-                    onChange={(e) => setCustomerPhone(e.target.value)}
-                    placeholder="Enter phone number"
-                    className="w-full h-11 rounded-xl border border-[#D8D5CC] bg-[#FAF9F5] px-4 text-sm outline-none focus:border-[#252525] focus:ring-2 focus:ring-[#252525]/10"
-                  />
-                </div>
-
-              </div>
-            </div>
-
-            {/* Food Section */}
-            <div className="bg-white rounded-2xl border border-[#E4E0D7] p-5 sm:p-6">
-
-              {/* Food Header */}
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
-
-                <div>
-                  <h2 className="text-xl font-bold text-[#252525]">
-                    Select Food
-                  </h2>
-
-                  <p className="text-sm text-[#8A806B] mt-1">
-                    Add food items to customer's order
-                  </p>
-                </div>
-
-                {/* Search */}
-                <div className="relative w-full sm:w-64">
-
-                  <FaSearch
-                    className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8A806B]"
-                    size={13}
-                  />
-
-                  <input
-                    type="text"
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Search food..."
-                    className="w-full h-11 rounded-xl border border-[#D8D5CC] bg-[#FAF9F5] pl-10 pr-4 text-sm outline-none focus:border-[#252525]"
-                  />
-
-                </div>
-
-              </div>
-
-              {/* Food Grid */}
-              {filteredFoods.length > 0 ? (
-                <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-
-                  {filteredFoods.map((food) => (
-                    <div
-                      key={food.id}
-                      className="group border border-[#E4E0D7] rounded-2xl overflow-hidden bg-white hover:shadow-md transition-all duration-200"
-                    >
-
-                      {/* Image */}
-                      <div className="h-28 sm:h-32 overflow-hidden">
-                        <img
-                          src={food.image}
-                          alt={food.name}
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        />
-                      </div>
-
-                      {/* Info */}
-                      <div className="p-3">
-
-                        <h3 className="font-bold text-sm text-[#252525] line-clamp-2 min-h-[40px]">
-                          {food.name}
-                        </h3>
-
-                        <div className="flex items-center justify-between gap-2 mt-3">
-
-                          <span className="font-extrabold text-[#252525]">
-                            ৳{food.price}
-                          </span>
-
-                          <button
-                            onClick={() => addToCart(food)}
-                            className="w-9 h-9 rounded-lg bg-[#252525] text-white flex items-center justify-center hover:bg-[#A08E65] transition"
-                            title="Add food"
-                          >
-                            <FaPlus size={12} />
-                          </button>
-
-                        </div>
-
-                      </div>
-                    </div>
-                  ))}
-
-                </div>
-              ) : (
-                <div className="py-12 text-center">
-                  <p className="text-[#8A806B]">
-                    No food found.
-                  </p>
-                </div>
-              )}
-
-            </div>
           </div>
 
-          {/* RIGHT SIDE - ORDER */}
+          {/* Categories */}
+          <div className="flex gap-2 mt-4 overflow-x-auto pb-1">
+
+            {categories.map((category) => (
+              <button
+                key={category}
+                onClick={() => setActiveCategory(category)}
+                className={`
+                  whitespace-nowrap px-4 py-2 rounded-full
+                  text-xs sm:text-sm font-semibold transition-all
+                  ${
+                    activeCategory === category
+                      ? "bg-[#252525] text-white"
+                      : "bg-[#F7F5EF] text-[#252525] hover:bg-[#E9E5DA]"
+                  }
+                `}
+              >
+                {category}
+              </button>
+            ))}
+
+          </div>
+
+        </div>
+
+        {/* ================= MAIN CONTENT ================= */}
+        <div className="grid lg:grid-cols-[1fr_380px] gap-6">
+
+          {/* ================= FOOD LIST ================= */}
+          <div>
+
+            <div className="flex items-center justify-between mb-4">
+
+              <div>
+                <h2 className="text-lg sm:text-xl font-bold text-[#252525]">
+                  Food Menu
+                </h2>
+
+                <p className="text-xs text-[#8A806B] mt-1">
+                  Select food consumed by the customer
+                </p>
+              </div>
+
+              <span className="text-xs font-semibold text-[#8A806B]">
+                {filteredFoods.length} items
+              </span>
+
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-2 xl:grid-cols-3 gap-3 sm:gap-5">
+
+              {filteredFoods.map((food) => (
+                <div
+                  key={food.id}
+                  className="
+                    bg-white rounded-2xl overflow-hidden
+                    border border-[#E4E0D7]
+                    shadow-[0_3px_15px_rgba(37,37,37,0.06)]
+                  "
+                >
+
+                  {/* Image */}
+                  <div className="relative h-32 sm:h-40 overflow-hidden">
+
+                    <img
+                      src={food.image}
+                      alt={food.name}
+                      className="w-full h-full object-cover"
+                    />
+
+                    <span
+                      className="
+                        absolute top-2 left-2
+                        px-2 py-1 rounded-full
+                        bg-white/95 text-[9px] sm:text-[10px]
+                        font-bold text-[#252525]
+                      "
+                    >
+                      {food.category}
+                    </span>
+
+                  </div>
+
+                  {/* Content */}
+                  <div className="p-3 sm:p-4">
+
+                    <h3 className="font-bold text-sm sm:text-base text-[#252525] line-clamp-2 min-h-[40px]">
+                      {food.name}
+                    </h3>
+
+                    <div className="flex items-center justify-between gap-2 mt-3">
+
+                      <p className="font-extrabold text-lg text-[#252525]">
+                        ৳{food.price}
+                      </p>
+
+                      <button
+                        onClick={() => addToWaiterOrder(food)}
+                        className="
+                          h-9 px-3 rounded-lg
+                          bg-[#252525] text-white
+                          text-xs font-semibold
+                          flex items-center gap-1.5
+                          hover:bg-[#A08E65]
+                          transition
+                        "
+                      >
+                        <FaPlus size={10} />
+                        Add
+                      </button>
+
+                    </div>
+
+                  </div>
+
+                </div>
+              ))}
+
+            </div>
+
+            {filteredFoods.length === 0 && (
+              <div className="bg-white border border-[#E4E0D7] rounded-2xl p-10 text-center">
+
+                <p className="font-semibold text-[#252525]">
+                  No food found
+                </p>
+
+                <p className="text-sm text-[#8A806B] mt-1">
+                  Try another food name or category.
+                </p>
+
+              </div>
+            )}
+
+          </div>
+
+          {/* ================= CURRENT ORDER ================= */}
           <div className="lg:sticky lg:top-24 h-fit">
 
-            <div className="bg-white rounded-2xl border border-[#E4E0D7] shadow-sm overflow-hidden">
+            <div className="bg-white border border-[#E4E0D7] rounded-2xl shadow-sm overflow-hidden">
 
               {/* Order Header */}
               <div className="p-5 border-b border-[#E4E0D7]">
@@ -240,63 +320,66 @@ const Waiter = () => {
                 <div className="flex items-center justify-between">
 
                   <div>
-                    <h2 className="text-xl font-bold text-[#252525]">
+                    <h2 className="text-lg font-bold text-[#252525]">
                       Current Order
                     </h2>
 
                     <p className="text-xs text-[#8A806B] mt-1">
-                      {cartItems.length} different item
-                      {cartItems.length !== 1 ? "s" : ""}
+                      Digital Khata
                     </p>
                   </div>
 
-                  <div className="w-10 h-10 rounded-xl bg-[#F7F5EF] flex items-center justify-center">
-                    <FaClipboardList
-                      className="text-[#252525]"
-                      size={16}
-                    />
-                  </div>
+                  {orderItems.length > 0 && (
+                    <button
+                      onClick={clearWaiterOrder}
+                      className="text-xs font-semibold text-red-500 hover:text-red-700"
+                    >
+                      Clear All
+                    </button>
+                  )}
 
                 </div>
 
               </div>
 
-              {/* Items */}
-              <div className="p-5">
+              {/* Order Items */}
+              <div className="p-4">
 
-                {cartItems.length === 0 ? (
+                {orderItems.length === 0 ? (
                   <div className="py-10 text-center">
 
-                    <div className="w-14 h-14 mx-auto rounded-full bg-[#F7F5EF] flex items-center justify-center">
-                      <FaClipboardList
-                        className="text-[#8A806B]"
-                        size={20}
-                      />
+                    <div className="w-14 h-14 mx-auto rounded-2xl bg-[#F7F5EF] flex items-center justify-center text-[#8A806B]">
+                      <FaClipboardList size={22} />
                     </div>
 
-                    <p className="mt-4 font-semibold text-[#252525]">
+                    <h3 className="font-bold text-[#252525] mt-4">
                       No items added
-                    </p>
+                    </h3>
 
-                    <p className="mt-1 text-xs text-[#8A806B]">
-                      Select food from the menu
+                    <p className="text-xs text-[#8A806B] mt-1">
+                      Add foods from the menu
                     </p>
 
                   </div>
                 ) : (
-                  <div className="space-y-4 max-h-[430px] overflow-y-auto pr-1">
+                  <div className="space-y-3">
 
-                    {cartItems.map((item) => (
+                    {orderItems.map((item) => (
                       <div
                         key={item.id}
-                        className="flex gap-3 pb-4 border-b border-[#E4E0D7] last:border-0"
+                        className="
+                          flex gap-3 p-3
+                          rounded-xl
+                          bg-[#FAF9F5]
+                          border border-[#E8E4DA]
+                        "
                       >
 
                         {/* Image */}
                         <img
                           src={item.image}
                           alt={item.name}
-                          className="w-16 h-16 rounded-xl object-cover flex-shrink-0"
+                          className="w-14 h-14 rounded-lg object-cover shrink-0"
                         />
 
                         {/* Details */}
@@ -304,60 +387,74 @@ const Waiter = () => {
 
                           <div className="flex items-start justify-between gap-2">
 
-                            <h3 className="font-semibold text-sm text-[#252525] line-clamp-2">
+                            <h4 className="text-sm font-bold text-[#252525] line-clamp-2">
                               {item.name}
-                            </h3>
+                            </h4>
 
                             <button
-                              onClick={() => removeFromCart(item.id)}
-                              className="text-red-400 hover:text-red-600 transition"
-                              title="Remove"
+                              onClick={() =>
+                                removeFromWaiterOrder(item.id)
+                              }
+                              className="text-[#8A806B] hover:text-red-500"
                             >
-                              <FaTrash size={12} />
+                              <FaTrash size={11} />
                             </button>
 
                           </div>
 
                           <p className="text-xs text-[#8A806B] mt-1">
-                            ৳{item.price} each
+                            ৳{item.price} × {item.quantity}
                           </p>
 
-                          {/* Quantity */}
-                          <div className="flex items-center justify-between mt-3">
+                          <div className="flex items-center justify-between mt-2">
 
-                            <div className="flex items-center border border-[#D8D5CC] rounded-lg overflow-hidden">
+                            {/* Quantity */}
+                            <div className="flex items-center gap-2">
 
                               <button
                                 onClick={() =>
-                                  decreaseQuantity(item.id)
+                                  decreaseWaiterQuantity(item.id)
                                 }
-                                className="w-8 h-8 flex items-center justify-center hover:bg-[#F7F5EF]"
+                                className="
+                                  w-7 h-7 rounded-md
+                                  bg-white border border-[#D8D5CC]
+                                  flex items-center justify-center
+                                  hover:bg-[#252525]
+                                  hover:text-white
+                                "
                               >
                                 <FaMinus size={9} />
                               </button>
 
-                              <span className="w-8 text-center text-sm font-bold">
+                              <span className="text-sm font-bold w-5 text-center">
                                 {item.quantity}
                               </span>
 
                               <button
                                 onClick={() =>
-                                  increaseQuantity(item.id)
+                                  increaseWaiterQuantity(item.id)
                                 }
-                                className="w-8 h-8 flex items-center justify-center hover:bg-[#F7F5EF]"
+                                className="
+                                  w-7 h-7 rounded-md
+                                  bg-[#252525] text-white
+                                  flex items-center justify-center
+                                  hover:bg-[#A08E65]
+                                "
                               >
                                 <FaPlus size={9} />
                               </button>
 
                             </div>
 
-                            <span className="font-bold text-sm text-[#252525]">
+                            {/* Item total */}
+                            <p className="text-sm font-extrabold text-[#252525]">
                               ৳{item.price * item.quantity}
-                            </span>
+                            </p>
 
                           </div>
 
                         </div>
+
                       </div>
                     ))}
 
@@ -366,23 +463,13 @@ const Waiter = () => {
 
               </div>
 
-              {/* Summary */}
-              {cartItems.length > 0 && (
+              {/* Total + Save */}
+              {orderItems.length > 0 && (
                 <div className="border-t border-[#E4E0D7] p-5">
 
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-sm text-[#8A806B]">
-                      Subtotal
-                    </span>
+                  <div className="flex items-center justify-between mb-4">
 
-                    <span className="font-semibold text-[#252525]">
-                      ৳{totalPrice}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between pt-3 border-t border-dashed border-[#D8D5CC]">
-
-                    <span className="font-bold text-[#252525]">
+                    <span className="text-sm font-semibold text-[#8A806B]">
                       Total
                     </span>
 
@@ -393,16 +480,33 @@ const Waiter = () => {
                   </div>
 
                   <button
-                    onClick={handlePlaceOrder}
-                    className="w-full h-12 mt-5 rounded-xl bg-[#252525] text-white font-bold hover:bg-[#A08E65] active:scale-[0.98] transition-all"
+                    onClick={handleSaveOrder}
+                    disabled={saving}
+                    className="
+                      w-full h-12 rounded-xl
+                      bg-[#252525] text-white
+                      font-bold text-sm
+                      flex items-center justify-center gap-2
+                      hover:bg-[#A08E65]
+                      transition-all
+                      disabled:opacity-60
+                      disabled:cursor-not-allowed
+                    "
                   >
-                    Place Order
+                    <FaSave />
+
+                    {saving ? "Saving Order..." : "Save Order"}
                   </button>
+
+                  <p className="text-[10px] text-center text-[#8A806B] mt-3">
+                    Order will be recorded as a completed cash order
+                  </p>
 
                 </div>
               )}
 
             </div>
+
           </div>
 
         </div>

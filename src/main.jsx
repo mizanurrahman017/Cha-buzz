@@ -8,12 +8,15 @@ import { router } from "./Routes/Router";
 
 import CartProvider from "./Contexts/CartContext";
 import AuthProvider from "./Context/AuthContext";
+import WaiterOrderProvider from "./Context/WaiterOrderContext";
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
     <AuthProvider>
       <CartProvider>
-        <RouterProvider router={router} />
+        <WaiterOrderProvider>
+          <RouterProvider router={router} />
+        </WaiterOrderProvider>
       </CartProvider>
     </AuthProvider>
   </StrictMode>

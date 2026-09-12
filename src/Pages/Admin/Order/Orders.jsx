@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   FaClock,
   FaCheck,
@@ -12,6 +12,7 @@ import {
   FaCreditCard,
   FaUser,
   FaSyncAlt,
+  FaReceipt,
 } from "react-icons/fa";
 
 import {
@@ -107,6 +108,26 @@ const Orders = () => {
   };
 
   // =====================================
+  // CHECK TODAY
+  // =====================================
+  const isToday = (timestamp) => {
+    if (!timestamp) return false;
+
+    try {
+      const date = timestamp.toDate();
+      const today = new Date();
+
+      return (
+        date.getDate() === today.getDate() &&
+        date.getMonth() === today.getMonth() &&
+        date.getFullYear() === today.getFullYear()
+      );
+    } catch {
+      return false;
+    }
+  };
+
+  // =====================================
   // STATUS CONFIG
   // =====================================
   const statusConfig = {
@@ -140,6 +161,12 @@ const Orders = () => {
       className: "bg-green-50 text-green-700 border-green-200",
     },
 
+    completed: {
+      label: "Completed",
+      icon: <FaCheck />,
+      className: "bg-green-50 text-green-700 border-green-200",
+    },
+
     cancelled: {
       label: "Cancelled",
       icon: <FaTimes />,
@@ -148,7 +175,7 @@ const Orders = () => {
   };
 
   // =====================================
-  // COUNT ORDERS
+  // BASIC COUNTS
   // =====================================
   const pendingCount = orders.filter(
     (order) => order.orderStatus === "pending"
@@ -165,6 +192,66 @@ const Orders = () => {
   const readyCount = orders.filter(
     (order) => order.orderStatus === "ready"
   ).length;
+
+  // =====================================
+  // WAITER ORDERS
+  // =====================================
+  const waiterOrders = useMemo(() => {
+    return orders.filter(
+      (order) => order.orderSource === "waiter"
+    );
+  }, [orders]);
+
+  // =====================================
+  // ONLINE ORDERS
+  // =====================================
+  const onlineOrders = useMemo(() => {
+    return orders.filter(
+      (order) => order.orderSource !== "waiter"
+    );
+  }, [orders]);
+
+  // =====================================
+  // TODAY'S WAITER ORDERS
+  // =====================================
+  const todayWaiterOrders = useMemo(() => {
+    return waiterOrders.filter((order) =>
+      isToday(order.createdAt)
+    );
+  }, [waiterOrders]);
+
+  // =====================================
+  // TODAY'S WAITER SALES
+  // =====================================
+  const todayWaiterSales = useMemo(() => {
+    return todayWaiterOrders.reduce(
+      (total, order) => total + Number(order.total || 0),
+      0
+    );
+  }, [todayWaiterOrders]);
+
+  // =====================================
+  // TODAY'S TOTAL SALES
+  // =====================================
+  const todayTotalSales = useMemo(() => {
+    return orders
+      .filter((order) => isToday(order.createdAt))
+      .filter((order) => order.paymentStatus === "paid")
+      .filter((order) => order.orderStatus !== "cancelled")
+      .reduce(
+        (total, order) => total + Number(order.total || 0),
+        0
+      );
+  }, [orders]);
+
+  // =====================================
+  // TODAY'S ONLINE ORDERS
+  // =====================================
+  const todayOnlineOrders = useMemo(() => {
+    return onlineOrders.filter((order) =>
+      isToday(order.createdAt)
+    );
+  }, [onlineOrders]);
 
   return (
     <section className="min-h-screen bg-[#F7F5EF] px-3 sm:px-5 lg:px-8 py-6 sm:py-8">
@@ -186,17 +273,19 @@ const Orders = () => {
             </h1>
 
             <p className="text-sm text-[#8A806B] mt-2">
-              Manage customer orders in real-time.
+              Manage customer and restaurant orders in real-time.
             </p>
           </div>
 
           <div className="flex items-center gap-2 text-sm font-semibold text-green-700 bg-green-50 border border-green-200 px-4 py-2.5 rounded-xl">
-            <FaSyncAlt className="animate-spin" size={13} />
+            <FaSyncAlt
+              className="animate-spin"
+              size={13}
+            />
             Live Orders
           </div>
 
         </div>
-
 
         {/* =====================================
             STATS
@@ -226,7 +315,6 @@ const Orders = () => {
 
           </div>
 
-
           {/* CONFIRMED */}
           <div className="bg-white border border-[#E4E0D7] rounded-2xl p-4 sm:p-5">
 
@@ -250,7 +338,6 @@ const Orders = () => {
 
           </div>
 
-
           {/* PREPARING */}
           <div className="bg-white border border-[#E4E0D7] rounded-2xl p-4 sm:p-5">
 
@@ -273,7 +360,6 @@ const Orders = () => {
             </div>
 
           </div>
-
 
           {/* READY */}
           <div className="bg-white border border-[#E4E0D7] rounded-2xl p-4 sm:p-5">
@@ -300,6 +386,120 @@ const Orders = () => {
 
         </div>
 
+        {/* =====================================
+            BUSINESS STATS
+        ===================================== */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 mb-7">
+
+          {/* TODAY WAITER ORDERS */}
+          <div className="bg-white border border-[#E4E0D7] rounded-2xl p-4 sm:p-5">
+
+            <div className="flex items-center justify-between">
+
+              <div>
+                <p className="text-xs sm:text-sm text-[#8A806B]">
+                  Today's Waiter Orders
+                </p>
+
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-[#252525] mt-1">
+                  {todayWaiterOrders.length}
+                </h2>
+              </div>
+
+              <div className="w-10 h-10 rounded-xl bg-[#F7F5EF] text-[#A08E65] flex items-center justify-center">
+                <FaReceipt />
+              </div>
+
+            </div>
+
+            <p className="text-[11px] text-[#8A806B] mt-3">
+              Offline restaurant orders
+            </p>
+
+          </div>
+
+          {/* TODAY WAITER SALES */}
+          <div className="bg-white border border-[#E4E0D7] rounded-2xl p-4 sm:p-5">
+
+            <div className="flex items-center justify-between">
+
+              <div>
+                <p className="text-xs sm:text-sm text-[#8A806B]">
+                  Today's Waiter Sales
+                </p>
+
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-[#252525] mt-1">
+                  ৳{todayWaiterSales}
+                </h2>
+              </div>
+
+              <div className="w-10 h-10 rounded-xl bg-green-50 text-green-700 flex items-center justify-center">
+                <FaMoneyBillWave />
+              </div>
+
+            </div>
+
+            <p className="text-[11px] text-[#8A806B] mt-3">
+              Cash sales recorded by waiter
+            </p>
+
+          </div>
+
+          {/* TODAY ONLINE ORDERS */}
+          <div className="bg-white border border-[#E4E0D7] rounded-2xl p-4 sm:p-5">
+
+            <div className="flex items-center justify-between">
+
+              <div>
+                <p className="text-xs sm:text-sm text-[#8A806B]">
+                  Today's Online Orders
+                </p>
+
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-[#252525] mt-1">
+                  {todayOnlineOrders.length}
+                </h2>
+              </div>
+
+              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center">
+                <FaCreditCard />
+              </div>
+
+            </div>
+
+            <p className="text-[11px] text-[#8A806B] mt-3">
+              Orders placed online
+            </p>
+
+          </div>
+
+          {/* TODAY TOTAL SALES */}
+          <div className="bg-[#252525] border border-[#252525] rounded-2xl p-4 sm:p-5">
+
+            <div className="flex items-center justify-between">
+
+              <div>
+                <p className="text-xs sm:text-sm text-white/60">
+                  Today's Total Sales
+                </p>
+
+                <h2 className="text-2xl sm:text-3xl font-extrabold text-white mt-1">
+                  ৳{todayTotalSales}
+                </h2>
+              </div>
+
+              <div className="w-10 h-10 rounded-xl bg-white/10 text-white flex items-center justify-center">
+                <FaMoneyBillWave />
+              </div>
+
+            </div>
+
+            <p className="text-[11px] text-white/50 mt-3">
+              Paid orders excluding cancelled
+            </p>
+
+          </div>
+
+        </div>
 
         {/* =====================================
             ORDERS
@@ -334,7 +534,7 @@ const Orders = () => {
               </h2>
 
               <p className="text-sm text-[#8A806B] mt-2">
-                New customer orders will appear here automatically.
+                New customer and waiter orders will appear here automatically.
               </p>
 
             </div>
@@ -348,6 +548,17 @@ const Orders = () => {
                 const currentStatus =
                   statusConfig[order.orderStatus] ||
                   statusConfig.pending;
+
+                const isWaiterOrder =
+                  order.orderSource === "waiter";
+
+                const orderSubtotal = isWaiterOrder
+                  ? Number(order.total || 0)
+                  : Number(order.subtotal || order.total || 0);
+
+                const deliveryFee = isWaiterOrder
+                  ? 0
+                  : Number(order.deliveryFee || 0);
 
                 return (
 
@@ -397,8 +608,22 @@ const Orders = () => {
                             </span>
 
                             {/* ORDER SOURCE */}
-                            <span className="px-2.5 py-1 rounded-full bg-[#F7F5EF] border border-[#E4E0D7] text-[11px] font-bold text-[#8A806B]">
-                              {order.orderSource === "waiter"
+                            <span
+                              className={`
+                                px-2.5
+                                py-1
+                                rounded-full
+                                border
+                                text-[11px]
+                                font-bold
+                                ${
+                                  isWaiterOrder
+                                    ? "bg-[#252525] text-white border-[#252525]"
+                                    : "bg-[#F7F5EF] text-[#8A806B] border-[#E4E0D7]"
+                                }
+                              `}
+                            >
+                              {isWaiterOrder
                                 ? "Waiter Order"
                                 : "Online Order"}
                             </span>
@@ -411,7 +636,6 @@ const Orders = () => {
 
                         </div>
 
-
                         {/* TOTAL */}
                         <div className="lg:text-right">
 
@@ -420,7 +644,7 @@ const Orders = () => {
                           </p>
 
                           <p className="text-2xl font-extrabold text-[#252525]">
-                            ৳{order.total}
+                            ৳{Number(order.total || 0)}
                           </p>
 
                         </div>
@@ -428,7 +652,6 @@ const Orders = () => {
                       </div>
 
                     </div>
-
 
                     {/* =================================
                         ORDER BODY
@@ -438,85 +661,113 @@ const Orders = () => {
                       <div className="grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6">
 
                         {/* ===========================
-                            CUSTOMER + ITEMS
+                            LEFT CONTENT
                         =========================== */}
                         <div>
 
-                          {/* CUSTOMER */}
-                          <div className="mb-6">
+                          {/* CUSTOMER INFORMATION */}
+                          {!isWaiterOrder && (
+                            <div className="mb-6">
 
-                            <h3 className="text-sm font-bold text-[#252525] mb-3">
-                              Customer Information
-                            </h3>
+                              <h3 className="text-sm font-bold text-[#252525] mb-3">
+                                Customer Information
+                              </h3>
 
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 
-                              <div className="flex items-start gap-3 p-3 rounded-xl bg-[#FDFCF9] border border-[#EEEAE1]">
+                                <div className="flex items-start gap-3 p-3 rounded-xl bg-[#FDFCF9] border border-[#EEEAE1]">
 
-                                <FaUser
-                                  className="text-[#A08E65] mt-1"
-                                  size={13}
-                                />
+                                  <FaUser
+                                    className="text-[#A08E65] mt-1"
+                                    size={13}
+                                  />
 
-                                <div>
-                                  <p className="text-[11px] text-[#8A806B]">
-                                    Name
-                                  </p>
+                                  <div>
+                                    <p className="text-[11px] text-[#8A806B]">
+                                      Name
+                                    </p>
 
-                                  <p className="text-sm font-semibold text-[#252525]">
-                                    {order.customer?.name || "N/A"}
-                                  </p>
+                                    <p className="text-sm font-semibold text-[#252525]">
+                                      {order.customer?.name || "N/A"}
+                                    </p>
+                                  </div>
+
                                 </div>
 
-                              </div>
+                                <div className="flex items-start gap-3 p-3 rounded-xl bg-[#FDFCF9] border border-[#EEEAE1]">
 
+                                  <FaPhoneAlt
+                                    className="text-[#A08E65] mt-1"
+                                    size={13}
+                                  />
 
-                              <div className="flex items-start gap-3 p-3 rounded-xl bg-[#FDFCF9] border border-[#EEEAE1]">
+                                  <div>
+                                    <p className="text-[11px] text-[#8A806B]">
+                                      Phone
+                                    </p>
 
-                                <FaPhoneAlt
-                                  className="text-[#A08E65] mt-1"
-                                  size={13}
-                                />
+                                    <a
+                                      href={`tel:${order.customer?.phone || ""}`}
+                                      className="text-sm font-semibold text-[#252525] hover:text-[#A08E65]"
+                                    >
+                                      {order.customer?.phone || "N/A"}
+                                    </a>
+                                  </div>
 
-                                <div>
-                                  <p className="text-[11px] text-[#8A806B]">
-                                    Phone
-                                  </p>
-
-                                  <a
-                                    href={`tel:${order.customer?.phone}`}
-                                    className="text-sm font-semibold text-[#252525] hover:text-[#A08E65]"
-                                  >
-                                    {order.customer?.phone || "N/A"}
-                                  </a>
                                 </div>
 
-                              </div>
+                                <div className="flex items-start gap-3 p-3 rounded-xl bg-[#FDFCF9] border border-[#EEEAE1] sm:col-span-2">
 
+                                  <FaMapMarkerAlt
+                                    className="text-[#A08E65] mt-1"
+                                    size={13}
+                                  />
 
-                              <div className="flex items-start gap-3 p-3 rounded-xl bg-[#FDFCF9] border border-[#EEEAE1] sm:col-span-2">
+                                  <div>
+                                    <p className="text-[11px] text-[#8A806B]">
+                                      Delivery Address
+                                    </p>
 
-                                <FaMapMarkerAlt
-                                  className="text-[#A08E65] mt-1"
-                                  size={13}
-                                />
+                                    <p className="text-sm font-semibold text-[#252525]">
+                                      {order.customer?.address || "N/A"}
+                                    </p>
+                                  </div>
 
-                                <div>
-                                  <p className="text-[11px] text-[#8A806B]">
-                                    Delivery Address
-                                  </p>
-
-                                  <p className="text-sm font-semibold text-[#252525]">
-                                    {order.customer?.address || "N/A"}
-                                  </p>
                                 </div>
 
                               </div>
 
                             </div>
+                          )}
 
-                          </div>
+                          {/* WAITER ORDER INFO */}
+                          {isWaiterOrder && (
+                            <div className="mb-6">
 
+                              <div className="p-4 rounded-xl bg-[#F7F5EF] border border-[#E4E0D7]">
+
+                                <div className="flex items-center gap-3">
+
+                                  <div className="w-10 h-10 rounded-xl bg-[#252525] text-white flex items-center justify-center">
+                                    <FaReceipt />
+                                  </div>
+
+                                  <div>
+                                    <p className="text-sm font-bold text-[#252525]">
+                                      Restaurant / Waiter Order
+                                    </p>
+
+                                    <p className="text-xs text-[#8A806B] mt-1">
+                                      Offline customer order recorded through the digital khata.
+                                    </p>
+                                  </div>
+
+                                </div>
+
+                              </div>
+
+                            </div>
+                          )}
 
                           {/* ITEMS */}
                           <div>
@@ -568,7 +819,7 @@ const Orders = () => {
                                   </div>
 
                                   <p className="text-sm font-extrabold text-[#252525]">
-                                    ৳{item.price * item.quantity}
+                                    ৳{Number(item.price || 0) * Number(item.quantity || 0)}
                                   </p>
 
                                 </div>
@@ -580,7 +831,6 @@ const Orders = () => {
                           </div>
 
                         </div>
-
 
                         {/* ===========================
                             RIGHT CONTROL PANEL
@@ -605,13 +855,16 @@ const Orders = () => {
                                 )}
 
                                 <span className="text-sm font-semibold text-[#252525]">
-                                  {order.paymentMethod === "online"
+
+                                  {isWaiterOrder
+                                    ? "Cash"
+                                    : order.paymentMethod === "online"
                                     ? "Online Payment"
                                     : "Cash on Delivery"}
+
                                 </span>
 
                               </div>
-
 
                               {/* PAYMENT STATUS */}
                               <select
@@ -638,6 +891,7 @@ const Orders = () => {
                                   focus:border-[#A08E65]
                                 "
                               >
+
                                 <option value="pending">
                                   Payment Pending
                                 </option>
@@ -658,10 +912,8 @@ const Orders = () => {
 
                             </div>
 
-
                             {/* DIVIDER */}
                             <div className="border-t border-[#DDD8CE] my-5"></div>
-
 
                             {/* ORDER STATUS */}
                             <div>
@@ -715,6 +967,10 @@ const Orders = () => {
                                   Delivered
                                 </option>
 
+                                <option value="completed">
+                                  Completed
+                                </option>
+
                                 <option value="cancelled">
                                   Cancelled
                                 </option>
@@ -723,35 +979,36 @@ const Orders = () => {
 
                             </div>
 
-
                             {/* PRICE */}
                             <div className="border-t border-[#DDD8CE] mt-5 pt-5 space-y-2">
 
                               <div className="flex justify-between text-xs">
 
                                 <span className="text-[#8A806B]">
-                                  Subtotal
+                                  {isWaiterOrder
+                                    ? "Food Total"
+                                    : "Subtotal"}
                                 </span>
 
                                 <span className="font-semibold text-[#252525]">
-                                  ৳{order.subtotal}
+                                  ৳{orderSubtotal}
                                 </span>
 
                               </div>
 
+                              {!isWaiterOrder && (
+                                <div className="flex justify-between text-xs">
 
-                              <div className="flex justify-between text-xs">
+                                  <span className="text-[#8A806B]">
+                                    Delivery
+                                  </span>
 
-                                <span className="text-[#8A806B]">
-                                  Delivery
-                                </span>
+                                  <span className="font-semibold text-[#252525]">
+                                    ৳{deliveryFee}
+                                  </span>
 
-                                <span className="font-semibold text-[#252525]">
-                                  ৳{order.deliveryFee}
-                                </span>
-
-                              </div>
-
+                                </div>
+                              )}
 
                               <div className="flex justify-between pt-2">
 
@@ -760,7 +1017,7 @@ const Orders = () => {
                                 </span>
 
                                 <span className="text-xl font-extrabold text-[#252525]">
-                                  ৳{order.total}
+                                  ৳{Number(order.total || 0)}
                                 </span>
 
                               </div>
@@ -773,11 +1030,10 @@ const Orders = () => {
 
                       </div>
 
-
                       {/* =================================
                           ORDER NOTE
                       ================================= */}
-                      {order.customer?.note && (
+                      {!isWaiterOrder && order.customer?.note && (
                         <div className="mt-5 p-4 rounded-xl bg-[#F7F5EF] border border-[#E4E0D7]">
 
                           <p className="text-xs font-bold text-[#252525]">

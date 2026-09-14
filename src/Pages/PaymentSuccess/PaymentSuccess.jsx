@@ -6,7 +6,7 @@ import {
     FaShoppingBag,
 } from "react-icons/fa";
 import { Link, useSearchParams } from "react-router";
-
+// ami
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../../Firebase/Firebase.config";
 

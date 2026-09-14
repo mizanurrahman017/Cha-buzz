@@ -12,6 +12,7 @@ import WaiterRoute from "./WaiterRoute";
 
 import Login from "../Pages/Auth/Login/Login";
 import Waiter from "../Pages/Waiter/Waiter";
+import PaymentSuccess from "../Pages/PaymentSuccess/PaymentSuccess";
 
 export const router = createBrowserRouter([
   {
@@ -32,6 +33,10 @@ export const router = createBrowserRouter([
       {
         path: "login",
         Component: Login,
+      },
+      {
+        path: "payment-success",
+        Component: PaymentSuccess,
       },
 
       // =========================

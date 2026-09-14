@@ -3,15 +3,86 @@ import cors from "cors";
 import dotenv from "dotenv";
 import axios from "axios";
 
+import {
+  getApps,
+  initializeApp,
+  cert,
+} from "firebase-admin/app";
+
+import {
+  getFirestore,
+  FieldValue,
+} from "firebase-admin/firestore";
+
 dotenv.config();
 
 const app = express();
 
 const PORT = process.env.PORT || 5000;
 
-// ===============================
+const FRONTEND_URL =
+  process.env.FRONTEND_URL || "http://localhost:5173";
+
+const BACKEND_URL =
+  process.env.BACKEND_URL || "http://localhost:5000";
+
+const isSandbox =
+  process.env.SSLCOMMERZ_MODE !== "live";
+
+// ==========================================
+// Firebase Admin SDK
+// ==========================================
+
+const firebasePrivateKey =
+  process.env.FIREBASE_PRIVATE_KEY?.replace(
+    /\\n/g,
+    "\n"
+  );
+
+if (
+  !process.env.FIREBASE_PROJECT_ID ||
+  !process.env.FIREBASE_CLIENT_EMAIL ||
+  !firebasePrivateKey
+) {
+  console.error(
+    "Firebase Admin credentials are missing from .env"
+  );
+
+  process.exit(1);
+}
+
+if (getApps().length === 0) {
+  initializeApp({
+    credential: cert({
+      projectId:
+        process.env.FIREBASE_PROJECT_ID,
+
+      clientEmail:
+        process.env.FIREBASE_CLIENT_EMAIL,
+
+      privateKey:
+        firebasePrivateKey,
+    }),
+  });
+}
+
+const db = getFirestore();
+
+// ==========================================
+// SSLCommerz URLs
+// ==========================================
+
+const SSL_CREATE_URL = isSandbox
+  ? "https://sandbox-gw.sslcommerz.com/gwprocess/v4/api.php"
+  : "https://securepay.sslcommerz.com/gwprocess/v4/api.php";
+
+const SSL_VALIDATION_URL = isSandbox
+  ? "https://sandbox.sslcommerz.com/validator/api/validationserverAPI.php"
+  : "https://securepay.sslcommerz.com/validator/api/validationserverAPI.php";
+
+// ==========================================
 // Middleware
-// ===============================
+// ==========================================
 
 app.use(
   cors({
@@ -21,631 +92,932 @@ app.use(
 );
 
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
-// ===============================
+app.use(
+  express.urlencoded({
+    extended: true,
+  })
+);
+
+// ==========================================
 // Test Route
-// ===============================
+// ==========================================
 
 app.get("/", (req, res) => {
   res.json({
     success: true,
     message: "Cha Buzz payment server is running!",
+    mode: isSandbox ? "sandbox" : "live",
   });
 });
 
-// ===============================
-// SSLCommerz Payment Create
-// ===============================
+// ==========================================
+// Find Gateway
+// ==========================================
 
-app.post("/api/payment/create", async (req, res) => {
-  try {
-    const {
-      customer,
-      items,
-      subtotal,
-      deliveryFee,
-      total,
-      orderId,
-    } = req.body;
+const findGateway = (
+  gatewayList,
+  gatewayName
+) => {
+  return gatewayList.find(
+    (gateway) =>
+      String(gateway?.gw || "").toLowerCase() ===
+      gatewayName.toLowerCase()
+  );
+};
 
-    // ===============================
-    // Basic Validation
-    // ===============================
+// ==========================================
+// Validate SSLCommerz Transaction
+// ==========================================
 
-    if (!customer?.name?.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: "Customer name is required.",
-      });
+const validateTransaction = async (
+  valId
+) => {
+  if (!valId) {
+    throw new Error(
+      "SSLCommerz validation ID is missing."
+    );
+  }
+
+  const response = await axios.get(
+    SSL_VALIDATION_URL,
+    {
+      params: {
+        val_id: valId,
+
+        store_id:
+          process.env.SSLCOMMERZ_STORE_ID,
+
+        store_passwd:
+          process.env.SSLCOMMERZ_STORE_PASSWORD,
+
+        format: "json",
+      },
+
+      timeout: 30000,
     }
+  );
 
-    if (!customer?.phone?.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: "Customer phone is required.",
-      });
-    }
+  return response.data;
+};
 
-    if (!customer?.address?.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: "Customer address is required.",
-      });
-    }
+// ==========================================
+// Confirm Order From Payment
+// ==========================================
 
-    // SSLCommerz postcode requirement
-    if (!customer?.postcode?.trim()) {
-      return res.status(400).json({
-        success: false,
-        message: "Customer postcode is required.",
-      });
-    }
+const confirmOrderFromPayment = async ({
+  paymentData,
+  source,
+}) => {
+  const tranId =
+    paymentData?.tran_id ||
+    paymentData?.value_a;
 
-    if (
-      !items ||
-      !Array.isArray(items) ||
-      items.length === 0
-    ) {
-      return res.status(400).json({
-        success: false,
-        message: "Cart is empty.",
-      });
-    }
+  const valId =
+    paymentData?.val_id;
 
-    if (!total || Number(total) <= 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Invalid payment amount.",
-      });
-    }
+  if (!tranId) {
+    throw new Error(
+      "Transaction ID was not found."
+    );
+  }
 
-    // ===============================
-    // Generate Transaction ID
-    // ===============================
+  if (!valId) {
+    throw new Error(
+      "Validation ID was not found."
+    );
+  }
 
-    const tranId =
-      orderId ||
-      `CHA-BUZZ-${Date.now()}-${Math.floor(
-        Math.random() * 10000
-      )}`;
+  // ========================================
+  // Validate transaction with SSLCommerz
+  // ========================================
 
-    // ===============================
-    // SSLCommerz Sandbox API
-    // ===============================
+  const validation =
+    await validateTransaction(valId);
 
-    const sslcommerzUrl =
-      "https://sandbox-gw.sslcommerz.com/gwprocess/v4/api.php";
+  console.log(
+    "SSLCommerz Validation:",
+    validation
+  );
 
-    // ===============================
-    // Customer Values
-    // ===============================
+  const validStatus =
+    validation?.status === "VALID" ||
+    validation?.status === "VALIDATED";
 
-    const customerName = customer.name.trim();
+  if (!validStatus) {
+    throw new Error(
+      `Payment is not valid. Status: ${validation?.status}`
+    );
+  }
 
-    const customerPhone = customer.phone.trim();
+  // ========================================
+  // Find Firestore Order
+  // ========================================
 
-    const customerEmail =
-      customer.email?.trim() ||
-      "customer@chabuzz.com";
+  const orderRef = db
+    .collection("orders")
+    .doc(tranId);
 
-    const customerAddress =
-      customer.address.trim();
+  const orderSnap =
+    await orderRef.get();
 
-    const customerPostcode =
-      customer.postcode.trim();
+  if (!orderSnap.exists) {
+    throw new Error(
+      `Order ${tranId} was not found in Firestore.`
+    );
+  }
 
-    // ===============================
-    // Payment Data
-    // ===============================
+  const order = orderSnap.data();
 
-    const paymentData = {
-      // ===============================
-      // Store Credentials
-      // ===============================
+  // ========================================
+  // Amount Verification
+  // ========================================
 
-      store_id:
-        process.env.SSLCOMMERZ_STORE_ID,
+  const firestoreTotal =
+    Number(order.total || 0);
 
-      store_passwd:
-        process.env.SSLCOMMERZ_STORE_PASSWORD,
+  const sslAmount =
+    Number(validation.amount || 0);
 
-      // ===============================
-      // Payment Amount
-      // ===============================
+  if (
+    firestoreTotal.toFixed(2) !==
+    sslAmount.toFixed(2)
+  ) {
+    throw new Error(
+      `Amount mismatch. Firestore: ${firestoreTotal}, SSLCommerz: ${sslAmount}`
+    );
+  }
 
-      total_amount:
-        Number(total).toFixed(2),
+  // ========================================
+  // Currency Verification
+  // ========================================
 
-      currency: "BDT",
+  if (
+    validation.currency &&
+    validation.currency !== "BDT"
+  ) {
+    throw new Error(
+      `Invalid currency: ${validation.currency}`
+    );
+  }
 
-      // ===============================
-      // Transaction ID
-      // ===============================
+  // ========================================
+  // Already Processed
+  // ========================================
 
-      tran_id: tranId,
+  if (
+    order.paymentStatus === "paid" &&
+    order.orderStatus === "confirmed"
+  ) {
+    return {
+      alreadyProcessed: true,
 
-      // ===============================
-      // Gateway Selection
-      // ===============================
+      orderId: tranId,
 
-      // Only request bKash and Nagad
-      multi_card_name: "bkash,nagad",
-
-      // ===============================
-      // Callback URLs
-      // ===============================
-
-      success_url:
-        "http://localhost:5000/api/payment/success",
-
-      fail_url:
-        "http://localhost:5000/api/payment/fail",
-
-      cancel_url:
-        "http://localhost:5000/api/payment/cancel",
-
-      ipn_url:
-        "http://localhost:5000/api/payment/ipn",
-
-      // ===============================
-      // Customer Information
-      // ===============================
-
-      cus_name: customerName,
-
-      cus_email: customerEmail,
-
-      cus_phone: customerPhone,
-
-      cus_add1: customerAddress,
-
-      cus_city: "Sylhet",
-
-      cus_postcode: customerPostcode,
-
-      cus_country: "Bangladesh",
-
-      // ===============================
-      // Product Information
-      // ===============================
-
-      product_name:
-        items.length === 1
-          ? items[0].name
-          : `Cha Buzz Order (${items.length} items)`,
-
-      product_category: "Food",
-
-      product_profile: "general",
-
-      // Total number of food items
-      num_of_item: items.reduce(
-        (totalItems, item) =>
-          totalItems +
-          Number(item.quantity || 0),
-        0
-      ),
-
-      // ===============================
-      // Shipping Information
-      // ===============================
-
-      shipping_method: "YES",
-
-      ship_name: customerName,
-
-      ship_add1: customerAddress,
-
-      ship_city: "Sylhet",
-
-      ship_postcode: customerPostcode,
-
-      ship_country: "Bangladesh",
-
-      // ===============================
-      // Optional Values
-      // ===============================
-
-      value_a: tranId,
-
-      value_b: "cha-buzz",
-
-      value_c: customerPostcode,
+      validation,
     };
+  }
 
-    // ===============================
-    // Debug Information
-    // ===============================
+  // ========================================
+  // Update Firestore
+  // ========================================
 
-    console.log(
-      "================================="
-    );
+  await orderRef.update({
+    paymentStatus: "paid",
 
-    console.log(
-      "Creating SSLCommerz payment..."
-    );
+    orderStatus: "confirmed",
 
-    console.log({
-      tran_id: tranId,
+    transactionId:
+      validation.tran_id || tranId,
 
-      total_amount:
-        paymentData.total_amount,
+    validationId:
+      validation.val_id || valId,
 
-      customer: customerName,
+    paymentGateway:
+      validation.card_type ||
+      validation.card_name ||
+      order.paymentMethod ||
+      "sslcommerz",
 
-      phone: customerPhone,
+    validatedAmount:
+      sslAmount,
 
-      postcode: customerPostcode,
+    currency:
+      validation.currency || "BDT",
 
-      items: items.length,
+    paymentValidatedAt:
+      FieldValue.serverTimestamp(),
 
-      payment_gateways:
-        paymentData.multi_card_name,
-    });
+    paymentValidatedBy:
+      source,
 
-    console.log(
-      "================================="
-    );
+    sslcommerzResponse: {
+      status:
+        validation.status || null,
 
-    // ===============================
-    // Send Request to SSLCommerz
-    // ===============================
+      tran_date:
+        validation.tran_date || null,
 
-    const response = await axios.post(
-      sslcommerzUrl,
-      new URLSearchParams(
-        paymentData
-      ).toString(),
-      {
-        headers: {
-          "Content-Type":
-            "application/x-www-form-urlencoded",
+      bank_tran_id:
+        validation.bank_tran_id || null,
+
+      card_type:
+        validation.card_type || null,
+
+      currency:
+        validation.currency || null,
+    },
+  });
+
+  console.log(
+    `Order ${tranId} confirmed successfully.`
+  );
+
+  return {
+    alreadyProcessed: false,
+
+    orderId: tranId,
+
+    validation,
+  };
+};
+
+// ==========================================
+// CREATE PAYMENT
+// ==========================================
+
+app.post(
+  "/api/payment/create",
+  async (req, res) => {
+    try {
+      const {
+        customer,
+        items,
+        subtotal,
+        deliveryFee,
+        total,
+        orderId,
+      } = req.body;
+
+      // ======================================
+      // Customer Validation
+      // ======================================
+
+      if (!customer?.name?.trim()) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Customer name is required.",
+        });
+      }
+
+      if (!customer?.phone?.trim()) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Customer phone is required.",
+        });
+      }
+
+      if (!customer?.address?.trim()) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Customer address is required.",
+        });
+      }
+
+      if (!customer?.postcode?.trim()) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Customer postcode is required.",
+        });
+      }
+
+      // ======================================
+      // Cart Validation
+      // ======================================
+
+      if (
+        !Array.isArray(items) ||
+        items.length === 0
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "Cart is empty.",
+        });
+      }
+
+      // ======================================
+      // Amount Validation
+      // ======================================
+
+      if (
+        !total ||
+        Number(total) <= 0
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Invalid payment amount.",
+        });
+      }
+
+      // ======================================
+      // Order ID Required
+      // ======================================
+
+      if (!orderId) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Order ID is required.",
+        });
+      }
+
+      // ======================================
+      // Transaction ID
+      // ======================================
+
+      const tranId = orderId;
+
+      // ======================================
+      // Customer Information
+      // ======================================
+
+      const customerName =
+        customer.name.trim();
+
+      const customerPhone =
+        customer.phone.trim();
+
+      const customerEmail =
+        customer.email?.trim() ||
+        "customer@chabuzz.com";
+
+      const customerAddress =
+        customer.address.trim();
+
+      const customerPostcode =
+        customer.postcode.trim();
+
+      // ======================================
+      // Payment Data
+      // ======================================
+
+      const paymentData = {
+        store_id:
+          process.env.SSLCOMMERZ_STORE_ID,
+
+        store_passwd:
+          process.env.SSLCOMMERZ_STORE_PASSWORD,
+
+        total_amount:
+          Number(total).toFixed(2),
+
+        currency: "BDT",
+
+        tran_id: tranId,
+
+        // Only bKash + Nagad
+        multi_card_name:
+          "bkash,nagad",
+
+        // ====================================
+        // Callback URLs
+        // ====================================
+
+        success_url:
+          `${BACKEND_URL}/api/payment/success`,
+
+        fail_url:
+          `${BACKEND_URL}/api/payment/fail`,
+
+        cancel_url:
+          `${BACKEND_URL}/api/payment/cancel`,
+
+        ipn_url:
+          `${BACKEND_URL}/api/payment/ipn`,
+
+        // ====================================
+        // Customer
+        // ====================================
+
+        cus_name:
+          customerName,
+
+        cus_email:
+          customerEmail,
+
+        cus_phone:
+          customerPhone,
+
+        cus_add1:
+          customerAddress,
+
+        cus_city:
+          "Sylhet",
+
+        cus_postcode:
+          customerPostcode,
+
+        cus_country:
+          "Bangladesh",
+
+        // ====================================
+        // Product
+        // ====================================
+
+        product_name:
+          items.length === 1
+            ? items[0].name
+            : `Cha Buzz Order (${items.length} items)`,
+
+        product_category:
+          "Food",
+
+        product_profile:
+          "general",
+
+        num_of_item:
+          items.reduce(
+            (sum, item) =>
+              sum +
+              Number(
+                item.quantity || 0
+              ),
+            0
+          ),
+
+        // ====================================
+        // Shipping
+        // ====================================
+
+        shipping_method:
+          "YES",
+
+        ship_name:
+          customerName,
+
+        ship_add1:
+          customerAddress,
+
+        ship_city:
+          "Sylhet",
+
+        ship_postcode:
+          customerPostcode,
+
+        ship_country:
+          "Bangladesh",
+
+        // ====================================
+        // Custom Values
+        // ====================================
+
+        value_a:
+          tranId,
+
+        value_b:
+          "cha-buzz",
+
+        value_c:
+          customerPostcode,
+      };
+
+      // ======================================
+      // Debug
+      // ======================================
+
+      console.log(
+        "======================================"
+      );
+
+      console.log(
+        "Creating SSLCommerz Payment"
+      );
+
+      console.log({
+        mode:
+          isSandbox
+            ? "SANDBOX"
+            : "LIVE",
+
+        tran_id:
+          tranId,
+
+        total_amount:
+          paymentData.total_amount,
+
+        customer:
+          customerName,
+
+        phone:
+          customerPhone,
+
+        gateways:
+          paymentData.multi_card_name,
+      });
+
+      console.log(
+        "======================================"
+      );
+
+      // ======================================
+      // Create SSLCommerz Session
+      // ======================================
+
+      const response =
+        await axios.post(
+          SSL_CREATE_URL,
+
+          new URLSearchParams(
+            paymentData
+          ).toString(),
+
+          {
+            headers: {
+              "Content-Type":
+                "application/x-www-form-urlencoded",
+            },
+
+            timeout: 30000,
+          }
+        );
+
+      const data =
+        response.data;
+
+      console.log(
+        "SSLCommerz Response:",
+        data
+      );
+
+      // ======================================
+      // Gateway URL Check
+      // ======================================
+
+      if (!data?.GatewayPageURL) {
+        return res.status(400).json({
+          success: false,
+
+          message:
+            data?.failedreason ||
+            "Unable to create SSLCommerz payment session.",
+
+          sslcommerzResponse:
+            data,
+        });
+      }
+
+      // ======================================
+      // Gateway List
+      // ======================================
+
+      const gatewayList =
+        Array.isArray(data.desc)
+          ? data.desc
+          : [];
+
+      console.log(
+        "Available Gateways:"
+      );
+
+      console.log(
+        gatewayList.map(
+          (gateway) => ({
+            name:
+              gateway.name,
+
+            gw:
+              gateway.gw,
+
+            type:
+              gateway.type,
+
+            redirectGatewayURL:
+              gateway.redirectGatewayURL,
+          })
+        )
+      );
+
+      // ======================================
+      // Find bKash
+      // ======================================
+
+      const bkashGateway =
+        findGateway(
+          gatewayList,
+          "bkash"
+        );
+
+      // ======================================
+      // Find Nagad
+      // ======================================
+
+      const nagadGateway =
+        findGateway(
+          gatewayList,
+          "nagad"
+        );
+
+      // ======================================
+      // Debug
+      // ======================================
+
+      console.log(
+        "bKash Gateway:",
+        bkashGateway
+      );
+
+      console.log(
+        "Nagad Gateway:",
+        nagadGateway
+      );
+
+      // ======================================
+      // Send Response
+      // ======================================
+
+      return res.status(200).json({
+        success: true,
+
+        message:
+          "Payment session created successfully.",
+
+        tranId,
+
+        sessionKey:
+          data.sessionkey ||
+          null,
+
+        paymentOptions: {
+          bkash:
+            bkashGateway?.redirectGatewayURL ||
+            null,
+
+          nagad:
+            nagadGateway?.redirectGatewayURL ||
+            null,
         },
 
-        timeout: 30000,
-      }
+        gatewayPageURL:
+          data.GatewayPageURL,
+      });
+    } catch (error) {
+      console.error(
+        "======================================"
+      );
+
+      console.error(
+        "SSLCommerz Payment Error"
+      );
+
+      console.error(
+        error.response?.data ||
+        error.message
+      );
+
+      console.error(
+        "======================================"
+      );
+
+      return res.status(500).json({
+        success: false,
+
+        message:
+          "Failed to create payment session.",
+
+        error:
+          error.response?.data ||
+          error.message,
+      });
+    }
+  }
+);
+
+// ==========================================
+// PAYMENT SUCCESS
+// ==========================================
+
+const handlePaymentSuccess =
+  async (req, res) => {
+    try {
+      console.log(
+        "======================================"
+      );
+
+      console.log(
+        "SSLCommerz SUCCESS"
+      );
+
+      console.log(
+        req.body
+      );
+
+      const result =
+        await confirmOrderFromPayment({
+          paymentData:
+            req.body,
+
+          source:
+            "success_callback",
+        });
+
+      console.log(
+        "Payment successfully validated."
+      );
+
+      console.log(
+        result
+      );
+
+      return res.redirect(
+        `${FRONTEND_URL}/payment-success?orderId=${encodeURIComponent(
+          result.orderId
+        )}`
+      );
+    } catch (error) {
+      console.error(
+        "Payment success validation error:",
+        error.message
+      );
+
+      return res.redirect(
+        `${FRONTEND_URL}/payment-failed`
+      );
+    }
+  };
+
+app.post(
+  "/api/payment/success",
+  handlePaymentSuccess
+);
+
+app.get(
+  "/api/payment/success",
+  handlePaymentSuccess
+);
+
+// ==========================================
+// PAYMENT FAILED
+// ==========================================
+
+const handlePaymentFailed =
+  (req, res) => {
+    console.log(
+      "======================================"
     );
-
-    const data = response.data;
-
-    // ===============================
-    // SSLCommerz Response
-    // ===============================
 
     console.log(
-      "SSLCommerz Response:",
-      data
+      "SSLCommerz PAYMENT FAILED"
     );
 
-    // ===============================
-    // Check Gateway URL
-    // ===============================
+    console.log(
+      req.body
+    );
 
-    if (!data?.GatewayPageURL) {
+    return res.redirect(
+      `${FRONTEND_URL}/payment-failed`
+    );
+  };
+
+app.post(
+  "/api/payment/fail",
+  handlePaymentFailed
+);
+
+app.get(
+  "/api/payment/fail",
+  handlePaymentFailed
+);
+
+// ==========================================
+// PAYMENT CANCELLED
+// ==========================================
+
+const handlePaymentCancelled =
+  (req, res) => {
+    console.log(
+      "======================================"
+    );
+
+    console.log(
+      "SSLCommerz PAYMENT CANCELLED"
+    );
+
+    console.log(
+      req.body
+    );
+
+    return res.redirect(
+      `${FRONTEND_URL}/payment-cancelled`
+    );
+  };
+
+app.post(
+  "/api/payment/cancel",
+  handlePaymentCancelled
+);
+
+app.get(
+  "/api/payment/cancel",
+  handlePaymentCancelled
+);
+
+// ==========================================
+// SSLCommerz IPN
+// ==========================================
+
+app.post(
+  "/api/payment/ipn",
+  async (req, res) => {
+    try {
+      console.log(
+        "======================================"
+      );
+
+      console.log(
+        "SSLCommerz IPN RECEIVED"
+      );
+
+      console.log(
+        req.body
+      );
+
+      const result =
+        await confirmOrderFromPayment({
+          paymentData:
+            req.body,
+
+          source:
+            "ipn",
+        });
+
+      console.log(
+        "IPN payment validation result:"
+      );
+
+      console.log(
+        result
+      );
+
+      return res.status(200).json({
+        success: true,
+
+        message:
+          "IPN received and payment validated.",
+      });
+    } catch (error) {
+      console.error(
+        "IPN validation error:",
+        error.message
+      );
+
       return res.status(400).json({
         success: false,
 
         message:
-          data?.failedreason ||
-          "Unable to create SSLCommerz payment session.",
-
-        sslcommerzResponse: data,
+          error.message,
       });
     }
-
-    // ===============================
-    // Send Gateway URL to Frontend
-    // ===============================
-
-    return res.status(200).json({
-      success: true,
-
-      message:
-        "Payment session created successfully.",
-
-      tranId,
-
-      gatewayPageURL:
-        data.GatewayPageURL,
-
-      sessionKey:
-        data.sessionkey || null,
-    });
-  } catch (error) {
-    console.error(
-      "================================="
-    );
-
-    console.error(
-      "SSLCommerz payment error:"
-    );
-
-    console.error(
-      error.response?.data ||
-        error.message
-    );
-
-    console.error(
-      "================================="
-    );
-
-    return res.status(500).json({
-      success: false,
-
-      message:
-        "Failed to create payment session.",
-
-      error:
-        error.response?.data ||
-        error.message,
-    });
-  }
-});
-
-// ===============================
-// Payment Success
-// ===============================
-
-app.post(
-  "/api/payment/success",
-  (req, res) => {
-    console.log(
-      "================================="
-    );
-
-    console.log("Payment Success:");
-
-    console.log(req.body);
-
-    console.log(
-      "================================="
-    );
-
-    res.send(`
-      <html>
-
-        <head>
-          <title>Payment Successful</title>
-
-          <meta
-            name="viewport"
-            content="width=device-width, initial-scale=1.0"
-          />
-        </head>
-
-        <body
-          style="
-            font-family: Arial, sans-serif;
-            text-align: center;
-            padding: 100px 20px;
-            background: #F7F5EF;
-            color: #252525;
-          "
-        >
-
-          <div
-            style="
-              max-width: 500px;
-              margin: auto;
-              background: white;
-              padding: 40px 25px;
-              border-radius: 20px;
-              box-shadow:
-                0 5px 25px
-                rgba(0,0,0,0.08);
-            "
-          >
-
-            <h1 style="color: green;">
-              Payment Successful
-            </h1>
-
-            <p>
-              Your Cha Buzz payment was successful.
-            </p>
-
-            <p>
-              Please wait while your order
-              is being confirmed.
-            </p>
-
-          </div>
-
-        </body>
-
-      </html>
-    `);
   }
 );
 
-// ===============================
-// Payment Failed
-// ===============================
+// ==========================================
+// START SERVER
+// ==========================================
 
-app.post(
-  "/api/payment/fail",
-  (req, res) => {
+app.listen(
+  PORT,
+  () => {
     console.log(
-      "================================="
+      "======================================"
     );
 
-    console.log("Payment Failed:");
-
-    console.log(req.body);
-
     console.log(
-      "================================="
+      `Cha Buzz server running on port ${PORT}`
     );
 
-    res.send(`
-      <html>
+    console.log(
+      `Payment mode: ${
+        isSandbox
+          ? "SANDBOX"
+          : "LIVE"
+      }`
+    );
 
-        <head>
-          <title>Payment Failed</title>
+    console.log(
+      `Frontend: ${FRONTEND_URL}`
+    );
 
-          <meta
-            name="viewport"
-            content="width=device-width, initial-scale=1.0"
-          />
-        </head>
+    console.log(
+      `Backend: ${BACKEND_URL}`
+    );
 
-        <body
-          style="
-            font-family: Arial, sans-serif;
-            text-align: center;
-            padding: 100px 20px;
-            background: #F7F5EF;
-            color: #252525;
-          "
-        >
-
-          <div
-            style="
-              max-width: 500px;
-              margin: auto;
-              background: white;
-              padding: 40px 25px;
-              border-radius: 20px;
-              box-shadow:
-                0 5px 25px
-                rgba(0,0,0,0.08);
-            "
-          >
-
-            <h1 style="color: red;">
-              Payment Failed
-            </h1>
-
-            <p>
-              Your payment could not be completed.
-            </p>
-
-            <p>
-              Please try again.
-            </p>
-
-          </div>
-
-        </body>
-
-      </html>
-    `);
+    console.log(
+      "======================================"
+    );
   }
 );
-
-// ===============================
-// Payment Cancelled
-// ===============================
-
-app.post(
-  "/api/payment/cancel",
-  (req, res) => {
-    console.log(
-      "================================="
-    );
-
-    console.log("Payment Cancelled:");
-
-    console.log(req.body);
-
-    console.log(
-      "================================="
-    );
-
-    res.send(`
-      <html>
-
-        <head>
-          <title>Payment Cancelled</title>
-
-          <meta
-            name="viewport"
-            content="width=device-width, initial-scale=1.0"
-          />
-        </head>
-
-        <body
-          style="
-            font-family: Arial, sans-serif;
-            text-align: center;
-            padding: 100px 20px;
-            background: #F7F5EF;
-            color: #252525;
-          "
-        >
-
-          <div
-            style="
-              max-width: 500px;
-              margin: auto;
-              background: white;
-              padding: 40px 25px;
-              border-radius: 20px;
-              box-shadow:
-                0 5px 25px
-                rgba(0,0,0,0.08);
-            "
-          >
-
-            <h1>
-              Payment Cancelled
-            </h1>
-
-            <p>
-              You cancelled the payment.
-            </p>
-
-            <p>
-              You can return to Cha Buzz
-              and try again.
-            </p>
-
-          </div>
-
-        </body>
-
-      </html>
-    `);
-  }
-);
-
-// ===============================
-// SSLCommerz IPN
-// ===============================
-
-app.post(
-  "/api/payment/ipn",
-  (req, res) => {
-    console.log(
-      "================================="
-    );
-
-    console.log(
-      "SSLCommerz IPN received:"
-    );
-
-    console.log(req.body);
-
-    console.log(
-      "================================="
-    );
-
-    res.status(200).json({
-      success: true,
-
-      message:
-        "IPN received.",
-    });
-  }
-);
-
-// ===============================
-// Start Server
-// ===============================
-
-app.listen(PORT, () => {
-  console.log(
-    `Cha Buzz server running on port ${PORT}`
-  );
-});

@@ -16,6 +16,10 @@ import {
 
 dotenv.config();
 
+// ==========================================
+// APP CONFIG
+// ==========================================
+
 const app = express();
 
 const PORT = process.env.PORT || 5000;
@@ -30,7 +34,7 @@ const isSandbox =
   process.env.SSLCOMMERZ_MODE !== "live";
 
 // ==========================================
-// Firebase Admin SDK
+// FIREBASE ADMIN SDK
 // ==========================================
 
 const firebasePrivateKey =
@@ -45,7 +49,7 @@ if (
   !firebasePrivateKey
 ) {
   console.error(
-    "Firebase Admin credentials are missing from .env"
+    "Firebase Admin credentials are missing from environment variables."
   );
 
   process.exit(1);
@@ -54,14 +58,12 @@ if (
 if (getApps().length === 0) {
   initializeApp({
     credential: cert({
-      projectId:
-        process.env.FIREBASE_PROJECT_ID,
+      projectId: process.env.FIREBASE_PROJECT_ID,
 
       clientEmail:
         process.env.FIREBASE_CLIENT_EMAIL,
 
-      privateKey:
-        firebasePrivateKey,
+      privateKey: firebasePrivateKey,
     }),
   });
 }
@@ -69,7 +71,7 @@ if (getApps().length === 0) {
 const db = getFirestore();
 
 // ==========================================
-// SSLCommerz URLs
+// SSLCOMMERZ URLS
 // ==========================================
 
 const SSL_CREATE_URL = isSandbox
@@ -81,7 +83,7 @@ const SSL_VALIDATION_URL = isSandbox
   : "https://securepay.sslcommerz.com/validator/api/validationserverAPI.php";
 
 // ==========================================
-// Middleware
+// MIDDLEWARE
 // ==========================================
 
 app.use(
@@ -100,11 +102,11 @@ app.use(
 );
 
 // ==========================================
-// Test Route
+// HEALTH CHECK
 // ==========================================
 
 app.get("/", (req, res) => {
-  res.json({
+  res.status(200).json({
     success: true,
     message: "Cha Buzz payment server is running!",
     mode: isSandbox ? "sandbox" : "live",
@@ -112,7 +114,7 @@ app.get("/", (req, res) => {
 });
 
 // ==========================================
-// Find Gateway
+// FIND PAYMENT GATEWAY
 // ==========================================
 
 const findGateway = (
@@ -127,12 +129,10 @@ const findGateway = (
 };
 
 // ==========================================
-// Validate SSLCommerz Transaction
+// VALIDATE SSLCOMMERZ TRANSACTION
 // ==========================================
 
-const validateTransaction = async (
-  valId
-) => {
+const validateTransaction = async (valId) => {
   if (!valId) {
     throw new Error(
       "SSLCommerz validation ID is missing."
@@ -162,7 +162,7 @@ const validateTransaction = async (
 };
 
 // ==========================================
-// Confirm Order From Payment
+// CONFIRM ORDER FROM PAYMENT
 // ==========================================
 
 const confirmOrderFromPayment = async ({
@@ -189,7 +189,7 @@ const confirmOrderFromPayment = async ({
   }
 
   // ========================================
-  // Validate transaction with SSLCommerz
+  // VALIDATE TRANSACTION WITH SSLCOMMERZ
   // ========================================
 
   const validation =
@@ -211,7 +211,7 @@ const confirmOrderFromPayment = async ({
   }
 
   // ========================================
-  // Find Firestore Order
+  // FIND FIRESTORE ORDER
   // ========================================
 
   const orderRef = db
@@ -230,7 +230,7 @@ const confirmOrderFromPayment = async ({
   const order = orderSnap.data();
 
   // ========================================
-  // Amount Verification
+  // AMOUNT VERIFICATION
   // ========================================
 
   const firestoreTotal =
@@ -249,7 +249,7 @@ const confirmOrderFromPayment = async ({
   }
 
   // ========================================
-  // Currency Verification
+  // CURRENCY VERIFICATION
   // ========================================
 
   if (
@@ -262,7 +262,7 @@ const confirmOrderFromPayment = async ({
   }
 
   // ========================================
-  // Already Processed
+  // ALREADY PROCESSED
   // ========================================
 
   if (
@@ -271,15 +271,13 @@ const confirmOrderFromPayment = async ({
   ) {
     return {
       alreadyProcessed: true,
-
       orderId: tranId,
-
       validation,
     };
   }
 
   // ========================================
-  // Update Firestore
+  // UPDATE FIRESTORE
   // ========================================
 
   await orderRef.update({
@@ -335,9 +333,7 @@ const confirmOrderFromPayment = async ({
 
   return {
     alreadyProcessed: false,
-
     orderId: tranId,
-
     validation,
   };
 };
@@ -360,7 +356,7 @@ app.post(
       } = req.body;
 
       // ======================================
-      // Customer Validation
+      // CUSTOMER VALIDATION
       // ======================================
 
       if (!customer?.name?.trim()) {
@@ -396,7 +392,7 @@ app.post(
       }
 
       // ======================================
-      // Cart Validation
+      // CART VALIDATION
       // ======================================
 
       if (
@@ -410,7 +406,7 @@ app.post(
       }
 
       // ======================================
-      // Amount Validation
+      // AMOUNT VALIDATION
       // ======================================
 
       if (
@@ -425,7 +421,7 @@ app.post(
       }
 
       // ======================================
-      // Order ID Required
+      // ORDER ID VALIDATION
       // ======================================
 
       if (!orderId) {
@@ -437,13 +433,13 @@ app.post(
       }
 
       // ======================================
-      // Transaction ID
+      // TRANSACTION ID
       // ======================================
 
       const tranId = orderId;
 
       // ======================================
-      // Customer Information
+      // CUSTOMER INFORMATION
       // ======================================
 
       const customerName =
@@ -463,7 +459,7 @@ app.post(
         customer.postcode.trim();
 
       // ======================================
-      // Payment Data
+      // PAYMENT DATA
       // ======================================
 
       const paymentData = {
@@ -485,7 +481,7 @@ app.post(
           "bkash,nagad",
 
         // ====================================
-        // Callback URLs
+        // CALLBACK URLS
         // ====================================
 
         success_url:
@@ -501,7 +497,7 @@ app.post(
           `${BACKEND_URL}/api/payment/ipn`,
 
         // ====================================
-        // Customer
+        // CUSTOMER
         // ====================================
 
         cus_name:
@@ -526,7 +522,7 @@ app.post(
           "Bangladesh",
 
         // ====================================
-        // Product
+        // PRODUCT
         // ====================================
 
         product_name:
@@ -551,7 +547,7 @@ app.post(
           ),
 
         // ====================================
-        // Shipping
+        // SHIPPING
         // ====================================
 
         shipping_method:
@@ -573,7 +569,7 @@ app.post(
           "Bangladesh",
 
         // ====================================
-        // Custom Values
+        // CUSTOM VALUES
         // ====================================
 
         value_a:
@@ -587,7 +583,7 @@ app.post(
       };
 
       // ======================================
-      // Debug
+      // DEBUG
       // ======================================
 
       console.log(
@@ -625,7 +621,7 @@ app.post(
       );
 
       // ======================================
-      // Create SSLCommerz Session
+      // CREATE SSLCOMMERZ SESSION
       // ======================================
 
       const response =
@@ -655,7 +651,7 @@ app.post(
       );
 
       // ======================================
-      // Gateway URL Check
+      // GATEWAY URL CHECK
       // ======================================
 
       if (!data?.GatewayPageURL) {
@@ -672,7 +668,7 @@ app.post(
       }
 
       // ======================================
-      // Gateway List
+      // GATEWAY LIST
       // ======================================
 
       const gatewayList =
@@ -703,7 +699,7 @@ app.post(
       );
 
       // ======================================
-      // Find bKash
+      // FIND BKASH
       // ======================================
 
       const bkashGateway =
@@ -713,7 +709,7 @@ app.post(
         );
 
       // ======================================
-      // Find Nagad
+      // FIND NAGAD
       // ======================================
 
       const nagadGateway =
@@ -723,7 +719,7 @@ app.post(
         );
 
       // ======================================
-      // Debug
+      // DEBUG
       // ======================================
 
       console.log(
@@ -737,7 +733,7 @@ app.post(
       );
 
       // ======================================
-      // Send Response
+      // SEND RESPONSE
       // ======================================
 
       return res.status(200).json({
@@ -927,7 +923,7 @@ app.get(
 );
 
 // ==========================================
-// SSLCommerz IPN
+// SSLCOMMERZ IPN
 // ==========================================
 
 app.post(
@@ -991,6 +987,7 @@ app.post(
 
 app.listen(
   PORT,
+  "0.0.0.0",
   () => {
     console.log(
       "======================================"

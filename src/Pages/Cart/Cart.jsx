@@ -11,9 +11,7 @@ import {
 
 import { Link } from "react-router";
 
-import {
-  useCart,
-} from "../../Contexts/CartContext";
+import { useCart } from "../../Contexts/CartContext";
 
 import {
   addDoc,
@@ -21,9 +19,7 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 
-import {
-  db,
-} from "../../Firebase/Firebase.config";
+import { db } from "../../Firebase/Firebase.config";
 
 const Cart = () => {
   const {
@@ -34,6 +30,12 @@ const Cart = () => {
     removeFromCart,
     clearCart,
   } = useCart();
+
+  // ===============================
+  // Backend API URL
+  // ===============================
+
+  const API_URL = import.meta.env.VITE_API_URL;
 
   // ===============================
   // Form Data
@@ -52,43 +54,34 @@ const Cart = () => {
   // Payment Method
   // ===============================
 
-  const [paymentMethod, setPaymentMethod] =
-    useState("");
+  const [paymentMethod, setPaymentMethod] = useState("");
 
   // ===============================
   // Loading
   // ===============================
 
-  const [loading, setLoading] =
-    useState(false);
+  const [loading, setLoading] = useState(false);
 
   // ===============================
   // Payment Information Visible
   // ===============================
 
-  const [showPaymentInfo, setShowPaymentInfo] =
-    useState(false);
+  const [showPaymentInfo, setShowPaymentInfo] = useState(false);
 
   // ===============================
   // Delivery
   // ===============================
 
-  const deliveryFee =
-    cartItems.length > 0 ? 50 : 0;
+  const deliveryFee = cartItems.length > 0 ? 50 : 0;
 
-  const grandTotal =
-    Number(totalPrice) +
-    deliveryFee;
+  const grandTotal = Number(totalPrice) + deliveryFee;
 
   // ===============================
   // Form Change
   // ===============================
 
   const handleChange = (e) => {
-    const {
-      name,
-      value,
-    } = e.target;
+    const { name, value } = e.target;
 
     setFormData((prev) => ({
       ...prev,
@@ -100,11 +93,8 @@ const Cart = () => {
   // Select Payment Method
   // ===============================
 
-  const handlePaymentSelect = (
-    method
-  ) => {
+  const handlePaymentSelect = (method) => {
     setPaymentMethod(method);
-
     setShowPaymentInfo(true);
   };
 
@@ -121,6 +111,22 @@ const Cart = () => {
 
     if (cartItems.length === 0) {
       alert("Your cart is empty.");
+      return;
+    }
+
+    // ===============================
+    // Backend URL Check
+    // ===============================
+
+    if (!API_URL) {
+      alert(
+        "Payment server configuration is missing. Please try again later."
+      );
+
+      console.error(
+        "VITE_API_URL is not configured."
+      );
+
       return;
     }
 
@@ -167,66 +173,48 @@ const Cart = () => {
 
           price: Number(item.price),
 
-          quantity:
-            Number(item.quantity),
+          quantity: Number(item.quantity),
 
-          image:
-            item.image || "",
+          image: item.image || "",
 
-          category:
-            item.category || "",
+          category: item.category || "",
         })),
 
         customer: {
-          name:
-            formData.name.trim(),
+          name: formData.name.trim(),
 
-          phone:
-            formData.phone.trim(),
+          phone: formData.phone.trim(),
 
-          email:
-            formData.email.trim(),
+          email: formData.email.trim(),
 
-          address:
-            formData.address.trim(),
+          address: formData.address.trim(),
 
-          postcode:
-            formData.postcode.trim(),
+          postcode: formData.postcode.trim(),
 
-          note:
-            formData.note.trim(),
+          note: formData.note.trim(),
         },
 
-        subtotal:
-          Number(totalPrice),
+        subtotal: Number(totalPrice),
 
-        deliveryFee:
-          Number(deliveryFee),
+        deliveryFee: Number(deliveryFee),
 
-        total:
-          Number(grandTotal),
+        total: Number(grandTotal),
 
-        orderSource:
-          "online",
+        orderSource: "online",
 
-        paymentMethod:
-          paymentMethod,
+        paymentMethod: paymentMethod,
 
-        paymentStatus:
-          "pending",
+        paymentStatus: "pending",
 
-        orderStatus:
-          "pending",
+        orderStatus: "pending",
 
-        createdAt:
-          serverTimestamp(),
+        createdAt: serverTimestamp(),
       };
 
-      const orderRef =
-        await addDoc(
-          collection(db, "orders"),
-          orderData
-        );
+      const orderRef = await addDoc(
+        collection(db, "orders"),
+        orderData
+      );
 
       console.log(
         "Pending order created:",
@@ -238,76 +226,56 @@ const Cart = () => {
       // Create SSLCommerz Session
       // ===============================
 
-      const paymentResponse =
-        await fetch(
-          "http://localhost:5000/api/payment/create",
-          {
-            method: "POST",
+      const paymentResponse = await fetch(
+        `${API_URL}/api/payment/create`,
+        {
+          method: "POST",
 
-            headers: {
-              "Content-Type":
-                "application/json",
+          headers: {
+            "Content-Type": "application/json",
+          },
+
+          body: JSON.stringify({
+            orderId: orderRef.id,
+
+            customer: {
+              name: formData.name.trim(),
+
+              phone: formData.phone.trim(),
+
+              email: formData.email.trim(),
+
+              address: formData.address.trim(),
+
+              postcode: formData.postcode.trim(),
+
+              note: formData.note.trim(),
             },
 
-            body: JSON.stringify({
-              orderId:
-                orderRef.id,
+            items: cartItems.map((item) => ({
+              id: item.id,
 
-              customer: {
-                name:
-                  formData.name.trim(),
+              name: item.name,
 
-                phone:
-                  formData.phone.trim(),
+              price: Number(item.price),
 
-                email:
-                  formData.email.trim(),
+              quantity: Number(item.quantity),
 
-                address:
-                  formData.address.trim(),
+              category: item.category || "",
+            })),
 
-                postcode:
-                  formData.postcode.trim(),
+            subtotal: Number(totalPrice),
 
-                note:
-                  formData.note.trim(),
-              },
+            deliveryFee: Number(deliveryFee),
 
-              items:
-                cartItems.map(
-                  (item) => ({
-                    id: item.id,
+            total: Number(grandTotal),
+          }),
+        }
+      );
 
-                    name:
-                      item.name,
-
-                    price:
-                      Number(
-                        item.price
-                      ),
-
-                    quantity:
-                      Number(
-                        item.quantity
-                      ),
-
-                    category:
-                      item.category ||
-                      "",
-                  })
-                ),
-
-              subtotal:
-                Number(totalPrice),
-
-              deliveryFee:
-                Number(deliveryFee),
-
-              total:
-                Number(grandTotal),
-            }),
-          }
-        );
+      // ===============================
+      // Read Payment Response
+      // ===============================
 
       const paymentData =
         await paymentResponse.json();
@@ -336,8 +304,7 @@ const Cart = () => {
       // ===============================
 
       const selectedPaymentURL =
-        paymentData
-          ?.paymentOptions?.[
+        paymentData?.paymentOptions?.[
           paymentMethod
         ];
 
@@ -352,7 +319,7 @@ const Cart = () => {
       );
 
       // ===============================
-      // Redirect
+      // Redirect To SSLCommerz
       // ===============================
 
       if (selectedPaymentURL) {
@@ -383,7 +350,7 @@ const Cart = () => {
         error.message ||
           "Something went wrong while processing your order."
       );
-    } finally {
+
       setLoading(false);
     }
   };
@@ -396,7 +363,6 @@ const Cart = () => {
     return (
       <div className="min-h-[70vh] bg-[#F7F5EF] flex items-center justify-center px-4">
         <div className="text-center max-w-md">
-
           <div className="w-20 h-20 mx-auto mb-5 rounded-full bg-white border border-[#E4E0D7] flex items-center justify-center shadow-sm">
             <FaMobileAlt className="text-2xl text-[#8A806B]" />
           </div>
@@ -416,7 +382,6 @@ const Cart = () => {
             <FaArrowLeft size={12} />
             Continue Shopping
           </Link>
-
         </div>
       </div>
     );
@@ -428,7 +393,6 @@ const Cart = () => {
 
   return (
     <div className="min-h-screen bg-[#F7F5EF] py-8 sm:py-10 lg:py-12">
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* ===============================
@@ -436,7 +400,6 @@ const Cart = () => {
         =============================== */}
 
         <div className="mb-8">
-
           <Link
             to="/"
             className="inline-flex items-center gap-2 text-sm font-medium text-[#8A806B] hover:text-[#252525] transition"
@@ -452,7 +415,6 @@ const Cart = () => {
           <p className="mt-2 text-sm text-[#8A806B]">
             Review your order and complete your advance payment.
           </p>
-
         </div>
 
         {/* ===============================
@@ -476,7 +438,6 @@ const Cart = () => {
               <div className="px-5 py-4 border-b border-[#E4E0D7] flex items-center justify-between">
 
                 <div>
-
                   <h2 className="text-lg font-bold text-[#252525]">
                     Your Order
                   </h2>
@@ -484,13 +445,11 @@ const Cart = () => {
                   <p className="text-xs text-[#8A806B] mt-1">
                     {cartItems.reduce(
                       (total, item) =>
-                        total +
-                        item.quantity,
+                        total + item.quantity,
                       0
                     )}{" "}
                     items
                   </p>
-
                 </div>
 
                 <button
@@ -500,108 +459,92 @@ const Cart = () => {
                 >
                   Clear Cart
                 </button>
-
               </div>
 
               <div className="divide-y divide-[#E4E0D7]">
 
-                {cartItems.map(
-                  (item) => (
-                    <div
-                      key={item.id}
-                      className="p-4 sm:p-5 flex gap-4"
-                    >
+                {cartItems.map((item) => (
+                  <div
+                    key={item.id}
+                    className="p-4 sm:p-5 flex gap-4"
+                  >
 
-                      <img
-                        src={item.image}
-                        alt={item.name}
-                        className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl object-cover shrink-0"
-                      />
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl object-cover shrink-0"
+                    />
 
-                      <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0">
 
-                        <div className="flex justify-between gap-3">
+                      <div className="flex justify-between gap-3">
 
-                          <div>
+                        <div>
+                          <h3 className="font-bold text-[#252525] text-sm sm:text-base line-clamp-2">
+                            {item.name}
+                          </h3>
 
-                            <h3 className="font-bold text-[#252525] text-sm sm:text-base line-clamp-2">
-                              {item.name}
-                            </h3>
+                          <p className="text-xs text-[#8A806B] mt-1">
+                            ৳{item.price} each
+                          </p>
+                        </div>
 
-                            <p className="text-xs text-[#8A806B] mt-1">
-                              ৳{item.price} each
-                            </p>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            removeFromCart(item.id)
+                          }
+                          className="text-[#8A806B] hover:text-red-500 transition"
+                        >
+                          <FaTrash size={13} />
+                        </button>
 
-                          </div>
+                      </div>
+
+                      <div className="mt-3 flex items-center justify-between">
+
+                        <div className="flex items-center border border-[#D8D5CC] rounded-lg overflow-hidden">
 
                           <button
                             type="button"
                             onClick={() =>
-                              removeFromCart(
-                                item.id
-                              )
+                              decreaseQuantity(item.id)
                             }
-                            className="text-[#8A806B] hover:text-red-500 transition"
+                            className="w-8 h-8 flex items-center justify-center text-[#252525] hover:bg-[#F7F5EF] transition"
                           >
-                            <FaTrash size={13} />
+                            <FaMinus size={10} />
+                          </button>
+
+                          <span className="w-9 text-center text-sm font-bold text-[#252525]">
+                            {item.quantity}
+                          </span>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              increaseQuantity(item.id)
+                            }
+                            className="w-8 h-8 flex items-center justify-center text-[#252525] hover:bg-[#F7F5EF] transition"
+                          >
+                            <FaPlus size={10} />
                           </button>
 
                         </div>
 
-                        <div className="mt-3 flex items-center justify-between">
-
-                          <div className="flex items-center border border-[#D8D5CC] rounded-lg overflow-hidden">
-
-                            <button
-                              type="button"
-                              onClick={() =>
-                                decreaseQuantity(
-                                  item.id
-                                )
-                              }
-                              className="w-8 h-8 flex items-center justify-center text-[#252525] hover:bg-[#F7F5EF] transition"
-                            >
-                              <FaMinus size={10} />
-                            </button>
-
-                            <span className="w-9 text-center text-sm font-bold text-[#252525]">
-                              {item.quantity}
-                            </span>
-
-                            <button
-                              type="button"
-                              onClick={() =>
-                                increaseQuantity(
-                                  item.id
-                                )
-                              }
-                              className="w-8 h-8 flex items-center justify-center text-[#252525] hover:bg-[#F7F5EF] transition"
-                            >
-                              <FaPlus size={10} />
-                            </button>
-
-                          </div>
-
-                          <p className="font-extrabold text-[#252525]">
-                            ৳
-                            {Number(
-                              item.price
-                            ) *
-                              Number(
-                                item.quantity
-                              )}
-                          </p>
-
-                        </div>
+                        <p className="font-extrabold text-[#252525]">
+                          ৳
+                          {Number(item.price) *
+                            Number(item.quantity)}
+                        </p>
 
                       </div>
 
                     </div>
-                  )
-                )}
+
+                  </div>
+                ))}
 
               </div>
-
             </div>
 
             {/* ===============================
@@ -609,9 +552,7 @@ const Cart = () => {
             =============================== */}
 
             <form
-              onSubmit={
-                handlePlaceOrder
-              }
+              onSubmit={handlePlaceOrder}
               id="checkout-form"
               className="bg-white rounded-2xl border border-[#E4E0D7] shadow-sm overflow-hidden"
             >
@@ -633,7 +574,6 @@ const Cart = () => {
                 {/* Name */}
 
                 <div>
-
                   <label className="block text-sm font-semibold text-[#252525] mb-2">
                     Name{" "}
                     <span className="text-red-500">
@@ -644,23 +584,17 @@ const Cart = () => {
                   <input
                     type="text"
                     name="name"
-                    value={
-                      formData.name
-                    }
-                    onChange={
-                      handleChange
-                    }
+                    value={formData.name}
+                    onChange={handleChange}
                     placeholder="Enter your full name"
                     required
                     className="w-full h-12 px-4 rounded-xl border border-[#D8D5CC] bg-[#FCFBF8] outline-none text-sm text-[#252525] placeholder:text-[#A8A092] focus:border-[#252525] transition"
                   />
-
                 </div>
 
                 {/* Phone */}
 
                 <div>
-
                   <label className="block text-sm font-semibold text-[#252525] mb-2">
                     Phone Number{" "}
                     <span className="text-red-500">
@@ -671,23 +605,17 @@ const Cart = () => {
                   <input
                     type="tel"
                     name="phone"
-                    value={
-                      formData.phone
-                    }
-                    onChange={
-                      handleChange
-                    }
+                    value={formData.phone}
+                    onChange={handleChange}
                     placeholder="01XXXXXXXXX"
                     required
                     className="w-full h-12 px-4 rounded-xl border border-[#D8D5CC] bg-[#FCFBF8] outline-none text-sm text-[#252525] placeholder:text-[#A8A092] focus:border-[#252525] transition"
                   />
-
                 </div>
 
                 {/* Email */}
 
                 <div>
-
                   <label className="block text-sm font-semibold text-[#252525] mb-2">
                     Email Address{" "}
                     <span className="text-xs font-normal text-[#8A806B]">
@@ -698,22 +626,16 @@ const Cart = () => {
                   <input
                     type="email"
                     name="email"
-                    value={
-                      formData.email
-                    }
-                    onChange={
-                      handleChange
-                    }
+                    value={formData.email}
+                    onChange={handleChange}
                     placeholder="example@gmail.com"
                     className="w-full h-12 px-4 rounded-xl border border-[#D8D5CC] bg-[#FCFBF8] outline-none text-sm text-[#252525] placeholder:text-[#A8A092] focus:border-[#252525] transition"
                   />
-
                 </div>
 
                 {/* Address */}
 
                 <div>
-
                   <label className="block text-sm font-semibold text-[#252525] mb-2">
                     Delivery Address{" "}
                     <span className="text-red-500">
@@ -723,24 +645,18 @@ const Cart = () => {
 
                   <textarea
                     name="address"
-                    value={
-                      formData.address
-                    }
-                    onChange={
-                      handleChange
-                    }
+                    value={formData.address}
+                    onChange={handleChange}
                     placeholder="House/Road, Area, City"
                     required
                     rows="3"
                     className="w-full px-4 py-3 rounded-xl border border-[#D8D5CC] bg-[#FCFBF8] outline-none resize-none text-sm text-[#252525] placeholder:text-[#A8A092] focus:border-[#252525] transition"
                   />
-
                 </div>
 
                 {/* Postcode */}
 
                 <div>
-
                   <label className="block text-sm font-semibold text-[#252525] mb-2">
                     Postcode{" "}
                     <span className="text-red-500">
@@ -751,12 +667,8 @@ const Cart = () => {
                   <input
                     type="text"
                     name="postcode"
-                    value={
-                      formData.postcode
-                    }
-                    onChange={
-                      handleChange
-                    }
+                    value={formData.postcode}
+                    onChange={handleChange}
                     placeholder="e.g. 3100"
                     required
                     inputMode="numeric"
@@ -767,13 +679,11 @@ const Cart = () => {
                   <p className="mt-1.5 text-[11px] text-[#8A806B]">
                     Enter the postcode of your delivery area.
                   </p>
-
                 </div>
 
                 {/* Note */}
 
                 <div>
-
                   <label className="block text-sm font-semibold text-[#252525] mb-2">
                     Note{" "}
                     <span className="text-xs font-normal text-[#8A806B]">
@@ -783,17 +693,12 @@ const Cart = () => {
 
                   <textarea
                     name="note"
-                    value={
-                      formData.note
-                    }
-                    onChange={
-                      handleChange
-                    }
+                    value={formData.note}
+                    onChange={handleChange}
                     placeholder="Any special instruction?"
                     rows="3"
                     className="w-full px-4 py-3 rounded-xl border border-[#D8D5CC] bg-[#FCFBF8] outline-none resize-none text-sm text-[#252525] placeholder:text-[#A8A092] focus:border-[#252525] transition"
                   />
-
                 </div>
 
                 {/* ===============================
@@ -805,7 +710,6 @@ const Cart = () => {
                   <div className="flex items-center justify-between mb-3">
 
                     <div>
-
                       <label className="block text-sm font-semibold text-[#252525]">
                         Payment Method
                       </label>
@@ -813,7 +717,6 @@ const Cart = () => {
                       <p className="text-xs text-[#8A806B] mt-1">
                         Select how you want to pay in advance.
                       </p>
-
                     </div>
 
                     <FaLock
@@ -832,23 +735,19 @@ const Cart = () => {
                     <button
                       type="button"
                       onClick={() =>
-                        handlePaymentSelect(
-                          "bkash"
-                        )
+                        handlePaymentSelect("bkash")
                       }
                       className={`
                         relative p-4 rounded-xl border-2 text-left transition-all
                         ${
-                          paymentMethod ===
-                          "bkash"
+                          paymentMethod === "bkash"
                             ? "border-[#252525] bg-[#FCFBF8]"
                             : "border-[#E4E0D7] bg-white hover:border-[#A8A092]"
                         }
                       `}
                     >
 
-                      {paymentMethod ===
-                        "bkash" && (
+                      {paymentMethod === "bkash" && (
                         <FaCheckCircle
                           className="absolute top-3 right-3 text-[#252525]"
                           size={16}
@@ -862,7 +761,6 @@ const Cart = () => {
                         </div>
 
                         <div>
-
                           <p className="font-bold text-[#252525]">
                             bKash
                           </p>
@@ -870,7 +768,6 @@ const Cart = () => {
                           <p className="text-xs text-[#8A806B] mt-0.5">
                             Pay with bKash
                           </p>
-
                         </div>
 
                       </div>
@@ -882,23 +779,19 @@ const Cart = () => {
                     <button
                       type="button"
                       onClick={() =>
-                        handlePaymentSelect(
-                          "nagad"
-                        )
+                        handlePaymentSelect("nagad")
                       }
                       className={`
                         relative p-4 rounded-xl border-2 text-left transition-all
                         ${
-                          paymentMethod ===
-                          "nagad"
+                          paymentMethod === "nagad"
                             ? "border-[#252525] bg-[#FCFBF8]"
                             : "border-[#E4E0D7] bg-white hover:border-[#A8A092]"
                         }
                       `}
                     >
 
-                      {paymentMethod ===
-                        "nagad" && (
+                      {paymentMethod === "nagad" && (
                         <FaCheckCircle
                           className="absolute top-3 right-3 text-[#252525]"
                           size={16}
@@ -912,7 +805,6 @@ const Cart = () => {
                         </div>
 
                         <div>
-
                           <p className="font-bold text-[#252525]">
                             Nagad
                           </p>
@@ -920,7 +812,6 @@ const Cart = () => {
                           <p className="text-xs text-[#8A806B] mt-0.5">
                             Pay with Nagad
                           </p>
-
                         </div>
 
                       </div>
@@ -943,63 +834,46 @@ const Cart = () => {
                             className={`
                               w-10 h-10 rounded-lg flex items-center justify-center text-white shrink-0
                               ${
-                                paymentMethod ===
-                                "bkash"
+                                paymentMethod === "bkash"
                                   ? "bg-[#E2136E]"
                                   : "bg-[#F58220]"
                               }
                             `}
                           >
-
-                            <FaMobileAlt
-                              size={16}
-                            />
-
+                            <FaMobileAlt size={16} />
                           </div>
 
                           <div>
 
                             <h3 className="font-bold text-[#252525] text-sm">
-
-                              {paymentMethod ===
-                              "bkash"
+                              {paymentMethod === "bkash"
                                 ? "How to pay with bKash"
                                 : "How to pay with Nagad"}
-
                             </h3>
 
                             <div className="mt-2 space-y-1.5 text-xs text-[#6F6758]">
 
                               <p>
-                                <strong>
-                                  1.
-                                </strong>{" "}
+                                <strong>1.</strong>{" "}
                                 Click the payment button below.
                               </p>
 
                               <p>
-                                <strong>
-                                  2.
-                                </strong>{" "}
+                                <strong>2.</strong>{" "}
                                 You will be taken to the secure{" "}
-                                {paymentMethod ===
-                                "bkash"
+                                {paymentMethod === "bkash"
                                   ? "bKash"
                                   : "Nagad"}{" "}
                                 payment page.
                               </p>
 
                               <p>
-                                <strong>
-                                  3.
-                                </strong>{" "}
+                                <strong>3.</strong>{" "}
                                 Follow the instructions there and complete your payment.
                               </p>
 
                               <p>
-                                <strong>
-                                  4.
-                                </strong>{" "}
+                                <strong>4.</strong>{" "}
                                 Your order will be confirmed after successful payment verification.
                               </p>
 
@@ -1027,7 +901,6 @@ const Cart = () => {
                   {loading ? (
                     <>
                       <span className="loading loading-spinner loading-sm"></span>
-
                       Redirecting...
                     </>
                   ) : (
@@ -1036,8 +909,7 @@ const Cart = () => {
 
                       {paymentMethod
                         ? `Pay ৳${grandTotal} with ${
-                            paymentMethod ===
-                            "bkash"
+                            paymentMethod === "bkash"
                               ? "bKash"
                               : "Nagad"
                           }`
@@ -1081,39 +953,32 @@ const Cart = () => {
 
                   <div className="space-y-3">
 
-                    {cartItems.map(
-                      (item) => (
-                        <div
-                          key={item.id}
-                          className="flex items-center justify-between gap-4 text-sm"
-                        >
+                    {cartItems.map((item) => (
+                      <div
+                        key={item.id}
+                        className="flex items-center justify-between gap-4 text-sm"
+                      >
 
-                          <div className="flex-1 min-w-0">
+                        <div className="flex-1 min-w-0">
 
-                            <p className="font-medium text-[#252525] truncate">
-                              {item.name}
-                            </p>
+                          <p className="font-medium text-[#252525] truncate">
+                            {item.name}
+                          </p>
 
-                            <p className="text-xs text-[#8A806B] mt-0.5">
-                              {item.quantity} × ৳
-                              {item.price}
-                            </p>
-
-                          </div>
-
-                          <p className="font-semibold text-[#252525]">
-                            ৳
-                            {Number(
-                              item.price
-                            ) *
-                              Number(
-                                item.quantity
-                              )}
+                          <p className="text-xs text-[#8A806B] mt-0.5">
+                            {item.quantity} × ৳{item.price}
                           </p>
 
                         </div>
-                      )
-                    )}
+
+                        <p className="font-semibold text-[#252525]">
+                          ৳
+                          {Number(item.price) *
+                            Number(item.quantity)}
+                        </p>
+
+                      </div>
+                    ))}
 
                   </div>
 
@@ -1175,12 +1040,9 @@ const Cart = () => {
                         </span>
 
                         <span className="text-sm font-bold text-[#252525]">
-
-                          {paymentMethod ===
-                          "bkash"
+                          {paymentMethod === "bkash"
                             ? "bKash"
                             : "Nagad"}
-
                         </span>
 
                       </div>
@@ -1200,7 +1062,6 @@ const Cart = () => {
                     {loading ? (
                       <>
                         <span className="loading loading-spinner loading-sm"></span>
-
                         Redirecting...
                       </>
                     ) : (
@@ -1209,8 +1070,7 @@ const Cart = () => {
 
                         {paymentMethod
                           ? `Pay ৳${grandTotal} with ${
-                              paymentMethod ===
-                              "bkash"
+                              paymentMethod === "bkash"
                                 ? "bKash"
                                 : "Nagad"
                             }`
@@ -1246,7 +1106,6 @@ const Cart = () => {
         </div>
 
       </div>
-
     </div>
   );
 };

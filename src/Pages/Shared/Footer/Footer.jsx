@@ -29,12 +29,10 @@ const Footer = () => {
 
               <div>
                 <h2 className="text-xl font-bold tracking-wider text-[#252525]">
-                  CHA BUZZ
+                  CHAA BUZZ
                 </h2>
 
-                <p className="text-[9px] tracking-[0.2em] text-[#8A806B]">
-                  CAFE & RESTAURANT
-                </p>
+                
               </div>
 
             </div>

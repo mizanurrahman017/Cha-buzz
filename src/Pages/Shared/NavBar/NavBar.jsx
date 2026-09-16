@@ -2,7 +2,6 @@ import React, { useState } from "react";
 import {
   FaSearch,
   FaShoppingCart,
-  FaCoffee,
 } from "react-icons/fa";
 import { Link } from "react-router";
 import { useCart } from "../../../Contexts/CartContext";
@@ -11,7 +10,6 @@ const NavBar = () => {
   const [search, setSearch] = useState("");
   const [language, setLanguage] = useState("EN");
 
-  // CartContext থেকে cartCount নিচ্ছি
   const { cartCount } = useCart();
 
   const isBangla = language === "BN";
@@ -19,7 +17,7 @@ const NavBar = () => {
   const handleSearch = (e) => {
     setSearch(e.target.value);
 
-    // পরে Home-এর food search-এর সাথে connect করবো
+    // পরে Home-এর food search-এর সাথে connect করতে পারবে
     console.log("Search:", e.target.value);
   };
 
@@ -28,35 +26,52 @@ const NavBar = () => {
   };
 
   return (
-    <nav className="sticky top-0 z-50 bg-[#F7F5EF] border-b border-[#D8D5CC] shadow-sm">
+    <nav className="sticky top-0 z-50 bg-[#F7F3EC] border-b border-[#E2D8CA] shadow-[0_2px_12px_rgba(90,60,30,0.08)]">
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+        {/* ================= MAIN NAVBAR ================= */}
         <div className="min-h-20 flex items-center justify-between gap-4">
 
           {/* ================= LOGO ================= */}
           <Link
             to="/"
-            className="flex items-center gap-3 shrink-0"
+            className="flex items-center gap-3 shrink-0 group"
           >
-            <div className="w-11 h-11 rounded-full bg-[#252525] text-[#F7F5EF] flex items-center justify-center">
-              <FaCoffee className="text-lg" />
+            {/* Logo */}
+            <div className="w-14 h-14 flex items-center rounded-full justify-center overflow-hidden">
+              <img
+                src="/cha buzz logo.jpg"
+                alt="Chaa Buzz Logo"
+                className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
+              />
             </div>
 
-            <div>
-              <h1 className="text-xl font-bold tracking-wider text-[#252525]">
-                CHA BUZZ
+            {/* Brand Name */}
+            <div className="hidden xs:block sm:block">
+              <h1 className="text-xl sm:text-2xl font-extrabold tracking-wide text-[#5A2E16]">
+                CHAA BUZZ
               </h1>
 
-              <p className="text-[9px] sm:text-[10px] tracking-[0.2em] text-[#8A806B]">
-                {isBangla
-                  ? "ক্যাফে ও রেস্টুরেন্ট"
-                  : "CAFE & RESTAURANT"}
+              <p className="text-[10px] sm:text-xs tracking-[0.25em] text-[#9A6A43] font-medium">
+                TEA & FOOD
               </p>
             </div>
           </Link>
 
-          {/* ================= SEARCH ================= */}
-          <div className="hidden sm:flex flex-1 max-w-md relative">
-            <FaSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-[#8A806B]" />
+          {/* ================= DESKTOP SEARCH ================= */}
+          <div className="hidden sm:flex flex-1 max-w-lg relative">
+
+            <FaSearch
+              className="
+                absolute
+                left-5
+                top-1/2
+                -translate-y-1/2
+                text-[#9A6A43]
+                text-sm
+              "
+            />
 
             <input
               type="text"
@@ -69,21 +84,23 @@ const NavBar = () => {
               }
               className="
                 w-full
-                h-11
-                pl-11
-                pr-4
+                h-12
+                pl-12
+                pr-5
                 rounded-full
                 border
-                border-[#D8D5CC]
+                border-[#DCCDBB]
                 bg-white/80
                 text-sm
-                text-[#252525]
-                placeholder:text-[#9A968B]
+                text-[#3E2415]
+                placeholder:text-[#A89787]
                 outline-none
-                focus:border-[#A08E65]
-                focus:ring-2
-                focus:ring-[#A08E65]/20
                 transition-all
+                duration-300
+                focus:border-[#A96F3D]
+                focus:ring-4
+                focus:ring-[#A96F3D]/10
+                focus:bg-white
               "
             />
           </div>
@@ -99,17 +116,19 @@ const NavBar = () => {
                 h-10
                 rounded-full
                 border
-                border-[#D8D5CC]
+                border-[#DCCDBB]
+                bg-white/70
                 flex
                 items-center
                 justify-center
-                text-[#252525]
-                hover:text-[#A08E65]
-                transition
+                text-[#6B3D1F]
+                hover:bg-[#6B3D1F]
+                hover:text-white
+                transition-all
               "
               title={isBangla ? "খুঁজুন" : "Search"}
             >
-              <FaSearch />
+              <FaSearch className="text-sm" />
             </button>
 
             {/* ================= LANGUAGE ================= */}
@@ -121,13 +140,14 @@ const NavBar = () => {
                 sm:px-4
                 rounded-full
                 border
-                border-[#D8D5CC]
-                bg-white/60
-                text-sm
+                border-[#DCCDBB]
+                bg-white/70
+                text-xs
+                sm:text-sm
                 font-semibold
-                text-[#252525]
-                hover:border-[#A08E65]
-                hover:text-[#A08E65]
+                text-[#5A2E16]
+                hover:border-[#A96F3D]
+                hover:bg-white
                 transition-all
                 flex
                 items-center
@@ -139,13 +159,27 @@ const NavBar = () => {
                   : "বাংলায় পরিবর্তন করুন"
               }
             >
-              <span className={!isBangla ? "text-[#A08E65]" : ""}>
+              <span
+                className={
+                  !isBangla
+                    ? "text-[#8B4F26] font-bold"
+                    : "text-[#A89787]"
+                }
+              >
                 EN
               </span>
 
-              <span className="text-[#C3BFB4]">|</span>
+              <span className="text-[#D1C1AF]">
+                |
+              </span>
 
-              <span className={isBangla ? "text-[#A08E65]" : ""}>
+              <span
+                className={
+                  isBangla
+                    ? "text-[#8B4F26] font-bold"
+                    : "text-[#A89787]"
+                }
+              >
                 বাংলা
               </span>
             </button>
@@ -160,41 +194,47 @@ const NavBar = () => {
                 sm:w-11
                 sm:h-11
                 rounded-full
-                bg-[#252525]
-                text-[#F7F5EF]
+                bg-[#8B4F26]
+                text-[#FFF9F2]
                 flex
                 items-center
                 justify-center
-                hover:bg-[#A08E65]
+                shadow-md
+                hover:bg-[#6B3D1F]
+                hover:scale-105
                 transition-all
+                duration-300
               "
               title={isBangla ? "কার্ট" : "Cart"}
             >
               <FaShoppingCart className="text-sm sm:text-base" />
 
-              {/* Dynamic Cart Count */}
-              <span
-                className="
-                  absolute
-                  -top-1
-                  -right-1
-                  min-w-5
-                  h-5
-                  px-1
-                  rounded-full
-                  bg-[#A08E65]
-                  text-white
-                  text-[10px]
-                  font-bold
-                  flex
-                  items-center
-                  justify-center
-                "
-              >
-                {cartCount}
-              </span>
+              {/* Cart Count */}
+              {cartCount > 0 && (
+                <span
+                  className="
+                    absolute
+                    -top-1
+                    -right-1
+                    min-w-5
+                    h-5
+                    px-1
+                    rounded-full
+                    bg-[#C58A52]
+                    text-white
+                    text-[10px]
+                    font-bold
+                    border-2
+                    border-[#F7F3EC]
+                    flex
+                    items-center
+                    justify-center
+                  "
+                >
+                  {cartCount}
+                </span>
+              )}
             </Link>
-
           </div>
         </div>
 
@@ -208,7 +248,8 @@ const NavBar = () => {
                 left-4
                 top-1/2
                 -translate-y-1/2
-                text-[#8A806B]
+                text-[#9A6A43]
+                text-sm
               "
             />
 
@@ -228,21 +269,22 @@ const NavBar = () => {
                 pr-4
                 rounded-full
                 border
-                border-[#D8D5CC]
+                border-[#DCCDBB]
                 bg-white
                 text-sm
-                text-[#252525]
-                placeholder:text-[#9A968B]
+                text-[#3E2415]
+                placeholder:text-[#A89787]
                 outline-none
-                focus:border-[#A08E65]
-                focus:ring-2
-                focus:ring-[#A08E65]/20
                 transition-all
+                focus:border-[#A96F3D]
+                focus:ring-4
+                focus:ring-[#A96F3D]/10
               "
             />
 
           </div>
         </div>
+
       </div>
     </nav>
   );

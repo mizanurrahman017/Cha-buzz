@@ -1,6 +1,5 @@
 import React from "react";
 import {
-  FaCoffee,
   FaFacebookF,
   FaInstagram,
   FaTwitter,
@@ -12,7 +11,7 @@ import {
 
 const Footer = () => {
   return (
-    <footer className="bg-[#F7F5EF] border-t border-[#D8D5CC]">
+    <footer className="bg-[#F7F3EC] border-t border-[#DCCDBB]">
 
       {/* Main Footer */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
@@ -23,21 +22,27 @@ const Footer = () => {
           <div>
             <div className="flex items-center gap-3 mb-5">
 
-              <div className="w-11 h-11 rounded-full bg-[#252525] text-[#F7F5EF] flex items-center justify-center">
-                <FaCoffee />
+              {/* ================= LOGO ================= */}
+              <div className="w-14 h-14 flex items-center rounded-full justify-center overflow-hidden">
+                {/* তোমার Logo এখানে বসাবে */}
+                
+                <img
+                  src="/cha buzz logo.jpg"
+                  alt="Chaa Buzz Logo"
+                  className="w-full h-full object-contain"
+                />
+               
               </div>
 
               <div>
-                <h2 className="text-xl font-bold tracking-wider text-[#252525]">
+                <h2 className="text-xl font-bold tracking-wider text-[#5A2E16]">
                   CHAA BUZZ
                 </h2>
-
-                
               </div>
 
             </div>
 
-            <p className="text-sm leading-7 text-[#6F6B61] max-w-xs">
+            <p className="text-sm leading-7 text-[#7A6A5C] max-w-xs">
               Fresh food, refreshing tea, and a cozy place to enjoy every
               moment. Order your favorite food easily from Cha Buzz.
             </p>
@@ -47,7 +52,7 @@ const Footer = () => {
 
               <a
                 href="#"
-                className="w-10 h-10 rounded-full border border-[#D8D5CC] flex items-center justify-center text-[#252525] hover:bg-[#252525] hover:text-white transition-all"
+                className="w-10 h-10 rounded-full border border-[#DCCDBB] flex items-center justify-center text-[#6B3D1F] hover:bg-[#8B4F26] hover:text-white hover:border-[#8B4F26] transition-all"
                 aria-label="Facebook"
               >
                 <FaFacebookF className="text-sm" />
@@ -55,7 +60,7 @@ const Footer = () => {
 
               <a
                 href="#"
-                className="w-10 h-10 rounded-full border border-[#D8D5CC] flex items-center justify-center text-[#252525] hover:bg-[#252525] hover:text-white transition-all"
+                className="w-10 h-10 rounded-full border border-[#DCCDBB] flex items-center justify-center text-[#6B3D1F] hover:bg-[#8B4F26] hover:text-white hover:border-[#8B4F26] transition-all"
                 aria-label="Instagram"
               >
                 <FaInstagram className="text-sm" />
@@ -63,7 +68,7 @@ const Footer = () => {
 
               <a
                 href="#"
-                className="w-10 h-10 rounded-full border border-[#D8D5CC] flex items-center justify-center text-[#252525] hover:bg-[#252525] hover:text-white transition-all"
+                className="w-10 h-10 rounded-full border border-[#DCCDBB] flex items-center justify-center text-[#6B3D1F] hover:bg-[#8B4F26] hover:text-white hover:border-[#8B4F26] transition-all"
                 aria-label="Twitter"
               >
                 <FaTwitter className="text-sm" />
@@ -74,7 +79,7 @@ const Footer = () => {
 
           {/* ================= QUICK LINKS ================= */}
           <div>
-            <h3 className="text-base font-bold text-[#252525] mb-5">
+            <h3 className="text-base font-bold text-[#5A2E16] mb-5">
               Quick Links
             </h3>
 
@@ -83,7 +88,7 @@ const Footer = () => {
               <li>
                 <a
                   href="/"
-                  className="text-sm text-[#6F6B61] hover:text-[#A08E65] transition"
+                  className="text-sm text-[#7A6A5C] hover:text-[#8B4F26] transition"
                 >
                   Home
                 </a>
@@ -92,7 +97,7 @@ const Footer = () => {
               <li>
                 <a
                   href="/menu"
-                  className="text-sm text-[#6F6B61] hover:text-[#A08E65] transition"
+                  className="text-sm text-[#7A6A5C] hover:text-[#8B4F26] transition"
                 >
                   Our Menu
                 </a>
@@ -101,7 +106,7 @@ const Footer = () => {
               <li>
                 <a
                   href="/about"
-                  className="text-sm text-[#6F6B61] hover:text-[#A08E65] transition"
+                  className="text-sm text-[#7A6A5C] hover:text-[#8B4F26] transition"
                 >
                   About Us
                 </a>
@@ -110,7 +115,7 @@ const Footer = () => {
               <li>
                 <a
                   href="/contact"
-                  className="text-sm text-[#6F6B61] hover:text-[#A08E65] transition"
+                  className="text-sm text-[#7A6A5C] hover:text-[#8B4F26] transition"
                 >
                   Contact Us
                 </a>
@@ -119,7 +124,7 @@ const Footer = () => {
               <li>
                 <a
                   href="/orders"
-                  className="text-sm text-[#6F6B61] hover:text-[#A08E65] transition"
+                  className="text-sm text-[#7A6A5C] hover:text-[#8B4F26] transition"
                 >
                   My Orders
                 </a>
@@ -130,16 +135,16 @@ const Footer = () => {
 
           {/* ================= CONTACT ================= */}
           <div>
-            <h3 className="text-base font-bold text-[#252525] mb-5">
+            <h3 className="text-base font-bold text-[#5A2E16] mb-5">
               Contact Us
             </h3>
 
             <div className="space-y-4">
 
               <div className="flex items-start gap-3">
-                <FaMapMarkerAlt className="mt-1 text-[#A08E65]" />
+                <FaMapMarkerAlt className="mt-1 text-[#8B4F26]" />
 
-                <p className="text-sm leading-6 text-[#6F6B61]">
+                <p className="text-sm leading-6 text-[#7A6A5C]">
                   Amberkhana,
                   <br />
                   Sylhet, Bangladesh
@@ -147,17 +152,17 @@ const Footer = () => {
               </div>
 
               <div className="flex items-center gap-3">
-                <FaPhoneAlt className="text-[#A08E65]" />
+                <FaPhoneAlt className="text-[#8B4F26]" />
 
-                <p className="text-sm text-[#6F6B61]">
+                <p className="text-sm text-[#7A6A5C]">
                   +880 1XXXXXXXXX
                 </p>
               </div>
 
               <div className="flex items-center gap-3">
-                <FaEnvelope className="text-[#A08E65]" />
+                <FaEnvelope className="text-[#8B4F26]" />
 
-                <p className="text-sm text-[#6F6B61]">
+                <p className="text-sm text-[#7A6A5C]">
                   hello@chabuzz.com
                 </p>
               </div>
@@ -167,16 +172,16 @@ const Footer = () => {
 
           {/* ================= OPENING HOURS ================= */}
           <div>
-            <h3 className="text-base font-bold text-[#252525] mb-5">
+            <h3 className="text-base font-bold text-[#5A2E16] mb-5">
               Opening Hours
             </h3>
 
             <div className="flex items-start gap-3 mb-5">
-              <FaClock className="mt-1 text-[#A08E65]" />
+              <FaClock className="mt-1 text-[#8B4F26]" />
 
-              <div className="text-sm text-[#6F6B61] leading-7">
+              <div className="text-sm text-[#7A6A5C] leading-7">
                 <p>
-                  <span className="font-medium text-[#252525]">
+                  <span className="font-medium text-[#5A2E16]">
                     Saturday - Thursday
                   </span>
                   <br />
@@ -184,7 +189,7 @@ const Footer = () => {
                 </p>
 
                 <p className="mt-2">
-                  <span className="font-medium text-[#252525]">
+                  <span className="font-medium text-[#5A2E16]">
                     Friday
                   </span>
                   <br />
@@ -193,10 +198,10 @@ const Footer = () => {
               </div>
             </div>
 
-            <div className="inline-flex items-center px-4 py-2 rounded-full bg-[#ECE9DF]">
+            <div className="inline-flex items-center px-4 py-2 rounded-full bg-[#EDE3D6]">
               <span className="w-2 h-2 rounded-full bg-green-600 mr-2"></span>
 
-              <span className="text-xs font-medium text-[#555147]">
+              <span className="text-xs font-medium text-[#6B5A4B]">
                 Open Today
               </span>
             </div>
@@ -206,31 +211,31 @@ const Footer = () => {
       </div>
 
       {/* ================= BOTTOM FOOTER ================= */}
-      <div className="border-t border-[#D8D5CC]">
+      <div className="border-t border-[#DCCDBB]">
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
 
           <div className="flex flex-col md:flex-row items-center justify-between gap-3">
 
-            <p className="text-xs sm:text-sm text-[#8A867C] text-center md:text-left">
+            <p className="text-xs sm:text-sm text-[#9A8979] text-center md:text-left">
               © {new Date().getFullYear()}{" "}
-              <span className="font-semibold text-[#252525]">
+              <span className="font-semibold text-[#5A2E16]">
                 Cha Buzz
               </span>
               . All rights reserved.
             </p>
 
-            <div className="flex items-center gap-5 text-xs sm:text-sm text-[#8A867C]">
+            <div className="flex items-center gap-5 text-xs sm:text-sm text-[#9A8979]">
               <a
                 href="/privacy"
-                className="hover:text-[#A08E65] transition"
+                className="hover:text-[#8B4F26] transition"
               >
                 Privacy Policy
               </a>
 
               <a
                 href="/terms"
-                className="hover:text-[#A08E65] transition"
+                className="hover:text-[#8B4F26] transition"
               >
                 Terms & Conditions
               </a>

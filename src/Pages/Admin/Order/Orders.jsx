@@ -1,589 +1,906 @@
-import React, { useEffect, useMemo, useState } from "react";
-
-import {
-  FaClock,
-  FaCheck,
-  FaUtensils,
-  FaBoxOpen,
-  FaTruck,
-  FaTimes,
-  FaPhoneAlt,
-  FaMapMarkerAlt,
-  FaMoneyBillWave,
-  FaCreditCard,
-  FaUser,
-  FaSyncAlt,
-  FaReceipt,
-  FaGlobe,
-} from "react-icons/fa";
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 
 import {
   collection,
-  onSnapshot,
-  query,
-  orderBy,
   doc,
+  onSnapshot,
+  orderBy,
+  query,
+  serverTimestamp,
   updateDoc,
 } from "firebase/firestore";
 
+import {
+  FaClock,
+  FaCheckCircle,
+  FaUtensils,
+  FaTruck,
+  FaTimesCircle,
+  FaUserTie,
+  FaMobileAlt,
+  FaMoneyBillWave,
+  FaShieldAlt,
+  FaExclamationTriangle,
+} from "react-icons/fa";
+
 import { db } from "../../../Firebase/Firebase.config";
 
+import { useAuth } from "../../../Context/AuthContext";
 
-// ======================================================
-// ORDER CARD
-// ======================================================
+
+// =====================================================
+// Status configuration
+// =====================================================
+const statusConfig = {
+
+  pending: {
+    label: "Pending",
+    icon: <FaClock />,
+    className:
+      "bg-yellow-100 text-yellow-700 border-yellow-200",
+  },
+
+  pending_payment_verification: {
+    label: "Payment Verification",
+    icon: <FaExclamationTriangle />,
+    className:
+      "bg-amber-100 text-amber-700 border-amber-200",
+  },
+
+  confirmed: {
+    label: "Confirmed",
+    icon: <FaCheckCircle />,
+    className:
+      "bg-blue-100 text-blue-700 border-blue-200",
+  },
+
+  preparing: {
+    label: "Preparing",
+    icon: <FaUtensils />,
+    className:
+      "bg-purple-100 text-purple-700 border-purple-200",
+  },
+
+  ready: {
+    label: "Ready",
+    icon: <FaCheckCircle />,
+    className:
+      "bg-green-100 text-green-700 border-green-200",
+  },
+
+  delivered: {
+    label: "Delivered",
+    icon: <FaTruck />,
+    className:
+      "bg-indigo-100 text-indigo-700 border-indigo-200",
+  },
+
+  completed: {
+    label: "Completed",
+    icon: <FaCheckCircle />,
+    className:
+      "bg-green-100 text-green-700 border-green-200",
+  },
+
+  cancelled: {
+    label: "Cancelled",
+    icon: <FaTimesCircle />,
+    className:
+      "bg-red-100 text-red-700 border-red-200",
+  },
+};
+
+
+// =====================================================
+// Format Date
+// =====================================================
+const formatDate = (timestamp) => {
+
+  if (!timestamp) {
+    return "Just now";
+  }
+
+  try {
+
+    return timestamp
+      .toDate()
+      .toLocaleString("en-BD", {
+        dateStyle: "medium",
+        timeStyle: "short",
+      });
+
+  } catch (error) {
+    return "Unknown date";
+  }
+};
+
+
+// =====================================================
+// Check Today
+// =====================================================
+const isToday = (timestamp) => {
+
+  if (!timestamp) {
+    return false;
+  }
+
+  try {
+
+    const date = timestamp.toDate();
+
+    const today = new Date();
+
+    return (
+      date.getDate() === today.getDate() &&
+      date.getMonth() === today.getMonth() &&
+      date.getFullYear() === today.getFullYear()
+    );
+
+  } catch (error) {
+    return false;
+  }
+};
+
+
+// =====================================================
+// Order Card
+// =====================================================
 const OrderCard = ({
   order,
-  statusConfig,
-  updateOrderStatus,
-  updatePaymentStatus,
-  formatDate,
+  onUpdateOrderStatus,
+  onUpdatePaymentStatus,
+  onVerifyPayment,
+  onRejectPayment,
 }) => {
-  const currentStatus =
-    statusConfig[order.orderStatus] || statusConfig.pending;
 
-  const isWaiterOrder = order.orderSource === "waiter";
+  const isWaiterOrder =
+    order.orderSource === "waiter";
 
-  const orderSubtotal = isWaiterOrder
-    ? Number(order.total || 0)
-    : Number(order.subtotal || order.total || 0);
+  const isOnlineOrder =
+    order.orderSource !== "waiter";
 
-  const deliveryFee = isWaiterOrder
-    ? 0
-    : Number(order.deliveryFee || 0);
+
+  const subtotal =
+    Number(order.subtotal) ||
+    Number(order.total) ||
+    0;
+
+
+  const deliveryFee =
+    Number(order.deliveryFee) || 0;
+
+
+  const total =
+    Number(order.total) ||
+    subtotal;
+
+
+  const status =
+    statusConfig[order.orderStatus] ||
+    statusConfig.pending;
+
 
   return (
-    <div
-      className="
-        bg-white
-        border
-        border-[#E4E0D7]
-        rounded-2xl
-        overflow-hidden
-        shadow-[0_3px_15px_rgba(37,37,37,0.05)]
-        hover:shadow-[0_8px_25px_rgba(37,37,37,0.08)]
-        transition-shadow
-      "
-    >
-      {/* ==================================================
-          ORDER HEADER
-      ================================================== */}
-      <div className="p-4 border-b border-[#EEEAE1]">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-2">
-              <h2 className="text-sm sm:text-base font-extrabold text-[#252525]">
-                #{order.id.slice(0, 8)}
-              </h2>
 
-              {/* STATUS */}
-              <span
-                className={`
-                  inline-flex
-                  items-center
-                  gap-1
-                  px-2
-                  py-1
-                  rounded-full
-                  border
-                  text-[10px]
-                  font-bold
-                  ${currentStatus.className}
-                `}
-              >
-                {currentStatus.icon}
-                {currentStatus.label}
+    <div className="bg-white rounded-2xl border border-[#E4E0D7] shadow-sm overflow-hidden">
+
+
+      {/* =====================================================
+          HEADER
+      ===================================================== */}
+      <div className="p-5 border-b border-[#E4E0D7]">
+
+        <div className="flex flex-wrap items-start justify-between gap-3">
+
+          <div>
+
+            <div className="flex flex-wrap items-center gap-2">
+
+              <span className="text-sm font-bold text-[#252525]">
+                Order #{order.id.slice(0, 8)}
               </span>
+
+
+              {/* Source */}
+              {isWaiterOrder ? (
+
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#F7F5EF] border border-[#D8D5CC] text-xs font-semibold text-[#77705F]">
+
+                  <FaUserTie size={10} />
+
+                  Waiter Order
+
+                </span>
+
+              ) : (
+
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-pink-50 border border-pink-100 text-xs font-semibold text-pink-600">
+
+                  <FaMobileAlt size={10} />
+
+                  Online Order
+
+                </span>
+
+              )}
+
             </div>
 
-            <p className="text-[11px] text-[#8A806B] mt-2">
+
+            <p className="mt-1 text-xs text-[#8A806B]">
               {formatDate(order.createdAt)}
             </p>
+
           </div>
 
-          {/* TOTAL */}
-          <div className="text-right flex-shrink-0">
-            <p className="text-[10px] text-[#8A806B]">
-              Total
-            </p>
 
-            <p className="text-lg sm:text-xl font-extrabold text-[#252525]">
-              ৳{Number(order.total || 0)}
-            </p>
-          </div>
+          {/* Order status */}
+          <span
+            className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold ${status.className}`}
+          >
+            {status.icon}
+            {status.label}
+          </span>
+
         </div>
 
-        {/* SOURCE BADGE */}
-        <div className="mt-3">
-          {isWaiterOrder ? (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#252525] text-white text-[10px] font-bold">
-              <FaReceipt size={9} />
-              Waiter Order
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#F7F5EF] text-[#8A806B] border border-[#E4E0D7] text-[10px] font-bold">
-              <FaGlobe size={9} />
-              Online Order
-            </span>
-          )}
-        </div>
       </div>
 
 
-      {/* ==================================================
-          ORDER BODY
-      ================================================== */}
-      <div className="p-4">
+      {/* =====================================================
+          CUSTOMER / WAITER INFO
+      ===================================================== */}
+      <div className="p-5 border-b border-[#E4E0D7]">
 
-        {/* ==================================================
-            CUSTOMER INFORMATION
-        ================================================== */}
-        {!isWaiterOrder && (
-          <div className="mb-5">
-            <h3 className="text-xs font-bold text-[#252525] mb-3">
+
+        {isWaiterOrder ? (
+
+          <div className="flex items-center gap-3">
+
+            <div className="w-11 h-11 rounded-xl bg-[#F7F5EF] flex items-center justify-center">
+              <FaUserTie
+                className="text-[#A08E65]"
+                size={18}
+              />
+            </div>
+
+            <div>
+
+              <p className="font-bold text-[#252525]">
+                Waiter Order
+              </p>
+
+              <p className="text-xs text-[#8A806B]">
+                Recorded from waiter panel
+              </p>
+
+            </div>
+
+          </div>
+
+        ) : (
+
+          <div>
+
+            <h3 className="text-sm font-bold text-[#252525] mb-3">
               Customer Information
             </h3>
 
-            <div className="space-y-2">
 
-              {/* NAME */}
-              <div className="flex items-start gap-2.5 p-2.5 rounded-xl bg-[#FDFCF9] border border-[#EEEAE1]">
-                <FaUser
-                  className="text-[#A08E65] mt-1"
-                  size={11}
-                />
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 
-                <div className="min-w-0">
-                  <p className="text-[10px] text-[#8A806B]">
-                    Name
-                  </p>
+              <div>
+                <p className="text-xs text-[#8A806B]">
+                  Name
+                </p>
 
-                  <p className="text-xs font-semibold text-[#252525] break-words">
-                    {order.customer?.name || "N/A"}
-                  </p>
-                </div>
+                <p className="text-sm font-semibold text-[#252525]">
+                  {order.customer?.name || "N/A"}
+                </p>
               </div>
 
 
-              {/* PHONE */}
-              <div className="flex items-start gap-2.5 p-2.5 rounded-xl bg-[#FDFCF9] border border-[#EEEAE1]">
-                <FaPhoneAlt
-                  className="text-[#A08E65] mt-1"
-                  size={11}
-                />
+              <div>
+                <p className="text-xs text-[#8A806B]">
+                  Phone
+                </p>
 
-                <div className="min-w-0">
-                  <p className="text-[10px] text-[#8A806B]">
-                    Phone
-                  </p>
-
-                  <a
-                    href={`tel:${order.customer?.phone || ""}`}
-                    className="text-xs font-semibold text-[#252525] hover:text-[#A08E65] break-words"
-                  >
-                    {order.customer?.phone || "N/A"}
-                  </a>
-                </div>
+                <p className="text-sm font-semibold text-[#252525]">
+                  {order.customer?.phone || "N/A"}
+                </p>
               </div>
 
 
-              {/* ADDRESS */}
-              <div className="flex items-start gap-2.5 p-2.5 rounded-xl bg-[#FDFCF9] border border-[#EEEAE1]">
-                <FaMapMarkerAlt
-                  className="text-[#A08E65] mt-1"
-                  size={11}
-                />
-
-                <div className="min-w-0">
-                  <p className="text-[10px] text-[#8A806B]">
-                    Delivery Address
-                  </p>
-
-                  <p className="text-xs font-semibold text-[#252525] break-words">
-                    {order.customer?.address || "N/A"}
-                  </p>
-                </div>
-              </div>
-
-            </div>
-          </div>
-        )}
-
-
-        {/* ==================================================
-            WAITER ORDER INFO
-        ================================================== */}
-        {isWaiterOrder && (
-          <div className="mb-5">
-            <div className="p-3 rounded-xl bg-[#F7F5EF] border border-[#E4E0D7]">
-
-              <div className="flex items-center gap-3">
-
-                <div className="w-9 h-9 rounded-lg bg-[#252525] text-white flex items-center justify-center flex-shrink-0">
-                  <FaReceipt size={13} />
-                </div>
+              {order.customer?.email && (
 
                 <div>
-                  <p className="text-xs font-bold text-[#252525]">
-                    Restaurant / Waiter Order
+                  <p className="text-xs text-[#8A806B]">
+                    Email
                   </p>
 
-                  <p className="text-[10px] text-[#8A806B] mt-1">
-                    Recorded by waiter
+                  <p className="text-sm font-semibold text-[#252525] break-all">
+                    {order.customer.email}
                   </p>
                 </div>
 
-              </div>
-
-            </div>
-          </div>
-        )}
+              )}
 
 
-        {/* ==================================================
-            ORDERED ITEMS
-        ================================================== */}
-        <div>
-          <h3 className="text-xs font-bold text-[#252525] mb-3">
-            Ordered Items
-          </h3>
+              <div className="sm:col-span-2">
 
-          <div className="space-y-2">
+                <p className="text-xs text-[#8A806B]">
+                  Address
+                </p>
 
-            {order.items?.map((item, index) => (
-              <div
-                key={`${item.id}-${index}`}
-                className="
-                  flex
-                  items-center
-                  gap-2.5
-                  p-2.5
-                  rounded-xl
-                  bg-[#FDFCF9]
-                  border
-                  border-[#EEEAE1]
-                "
-              >
-
-                <img
-                  src={item.image}
-                  alt={item.name}
-                  className="
-                    w-11
-                    h-11
-                    rounded-lg
-                    object-cover
-                    flex-shrink-0
-                  "
-                />
-
-                <div className="flex-1 min-w-0">
-
-                  <h4 className="text-xs font-bold text-[#252525] line-clamp-1">
-                    {item.name}
-                  </h4>
-
-                  <p className="text-[10px] text-[#8A806B] mt-1">
-                    ৳{item.price} × {item.quantity}
-                  </p>
-
-                </div>
-
-                <p className="text-xs font-extrabold text-[#252525] flex-shrink-0">
-                  ৳
-                  {Number(item.price || 0) *
-                    Number(item.quantity || 0)}
+                <p className="text-sm font-semibold text-[#252525]">
+                  {order.customer?.address || "N/A"}
                 </p>
 
               </div>
-            ))}
+
+            </div>
 
           </div>
-        </div>
+
+        )}
+
+      </div>
 
 
-        {/* ==================================================
-            CONTROL PANEL
-        ================================================== */}
-        <div className="mt-5 rounded-xl bg-[#F7F5EF] border border-[#E4E0D7] p-3.5">
+      {/* =====================================================
+          ONLINE BKASH PAYMENT VERIFICATION
+      ===================================================== */}
+      {isOnlineOrder && (
 
-          {/* PAYMENT */}
-          <div>
+        <div className="p-5 border-b border-[#E4E0D7]">
 
-            <h3 className="text-xs font-bold text-[#252525]">
-              Payment
+          <div className="flex items-center gap-2 mb-4">
+
+            <FaMobileAlt
+              className="text-pink-500"
+              size={16}
+            />
+
+            <h3 className="font-bold text-[#252525]">
+              bKash Payment
             </h3>
 
-            <div className="flex items-center gap-2 mt-2">
+          </div>
 
-              {order.paymentMethod === "online" ? (
-                <FaCreditCard
-                  className="text-[#A08E65]"
-                  size={12}
-                />
-              ) : (
-                <FaMoneyBillWave
-                  className="text-[#A08E65]"
-                  size={12}
-                />
-              )}
 
-              <span className="text-xs font-semibold text-[#252525]">
-                {isWaiterOrder
-                  ? "Cash"
-                  : order.paymentMethod === "online"
-                  ? "Online Payment"
-                  : "Cash on Delivery"}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+
+            {/* Payment Status */}
+            <div className="bg-[#F7F5EF] rounded-xl p-4">
+
+              <p className="text-xs text-[#8A806B]">
+                Payment Status
+              </p>
+
+              <p className="mt-1 font-bold text-[#252525] capitalize">
+                {order.paymentStatus || "pending"}
+              </p>
+
+            </div>
+
+
+            {/* Payment Amount */}
+            <div className="bg-[#F7F5EF] rounded-xl p-4">
+
+              <p className="text-xs text-[#8A806B]">
+                Customer Paid
+              </p>
+
+              <p className="mt-1 text-xl font-extrabold text-[#252525]">
+                ৳{Number(order.paymentAmount || order.total)}
+              </p>
+
+            </div>
+
+
+            {/* Transaction ID */}
+            <div className="sm:col-span-2 bg-pink-50 border border-pink-100 rounded-xl p-4">
+
+              <p className="text-xs text-pink-600 font-semibold">
+                bKash Transaction ID
+              </p>
+
+              <p className="mt-1 text-lg font-extrabold text-[#252525] tracking-wide break-all">
+                {order.transactionId || "Not provided"}
+              </p>
+
+            </div>
+
+          </div>
+
+
+          {/* =====================================================
+              Verification Notice
+          ===================================================== */}
+          {order.paymentStatus === "submitted" && (
+
+            <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl p-4">
+
+              <div className="flex gap-3">
+
+                <FaShieldAlt
+                  className="text-amber-600 mt-0.5 shrink-0"
+                  size={16}
+                />
+
+                <div>
+
+                  <p className="text-sm font-bold text-amber-800">
+                    Manual verification required
+                  </p>
+
+                  <p className="mt-1 text-xs sm:text-sm text-amber-700 leading-relaxed">
+                    Check your actual bKash transaction
+                    history/statement and verify that the
+                    Transaction ID and amount match before
+                    confirming this order.
+                  </p>
+
+                </div>
+
+              </div>
+
+            </div>
+
+          )}
+
+
+          {/* =====================================================
+              Verify / Reject Buttons
+          ===================================================== */}
+          {order.paymentStatus === "submitted" && (
+
+            <div className="mt-4 flex flex-col sm:flex-row gap-3">
+
+              <button
+                type="button"
+                onClick={() =>
+                  onVerifyPayment(order)
+                }
+                className="flex-1 h-11 rounded-xl bg-green-600 text-white font-bold flex items-center justify-center gap-2 hover:bg-green-700 transition"
+              >
+
+                <FaCheckCircle />
+
+                Verify bKash Payment
+
+              </button>
+
+
+              <button
+                type="button"
+                onClick={() =>
+                  onRejectPayment(order)
+                }
+                className="sm:w-32 h-11 rounded-xl border border-red-200 text-red-600 font-bold flex items-center justify-center gap-2 hover:bg-red-50 transition"
+              >
+
+                <FaTimesCircle />
+
+                Reject
+
+              </button>
+
+            </div>
+
+          )}
+
+
+          {/* Already verified */}
+          {order.paymentStatus === "paid" && (
+
+            <div className="mt-4 flex items-center gap-2 px-4 py-3 rounded-xl bg-green-50 border border-green-200 text-green-700">
+
+              <FaCheckCircle />
+
+              <span className="text-sm font-bold">
+                bKash payment verified
               </span>
 
             </div>
 
+          )}
 
-            {/* PAYMENT STATUS */}
-            <select
-              value={order.paymentStatus || "pending"}
-              onChange={(e) =>
-                updatePaymentStatus(
-                  order.id,
-                  e.target.value
-                )
-              }
-              className="
-                w-full
-                h-9
-                mt-2.5
-                px-2.5
-                rounded-lg
-                border
-                border-[#D8D5CC]
-                bg-white
-                text-xs
-                font-semibold
-                text-[#252525]
-                outline-none
-                focus:border-[#A08E65]
-              "
+
+          {/* Rejected */}
+          {order.paymentStatus === "failed" && (
+
+            <div className="mt-4 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700">
+
+              <div className="flex items-center gap-2">
+
+                <FaTimesCircle />
+
+                <span className="text-sm font-bold">
+                  Payment rejected
+                </span>
+
+              </div>
+
+
+              {order.paymentRejectionReason && (
+
+                <p className="mt-2 text-xs">
+                  Reason:{" "}
+                  {order.paymentRejectionReason}
+                </p>
+
+              )}
+
+            </div>
+
+          )}
+
+        </div>
+
+      )}
+
+
+      {/* =====================================================
+          ORDER ITEMS
+      ===================================================== */}
+      <div className="p-5 border-b border-[#E4E0D7]">
+
+        <h3 className="text-sm font-bold text-[#252525] mb-4">
+          Ordered Items
+        </h3>
+
+
+        <div className="space-y-3">
+
+          {order.items?.map((item, index) => (
+
+            <div
+              key={`${item.id}-${index}`}
+              className="flex items-center gap-3"
             >
-              <option value="pending">
-                Payment Pending
-              </option>
 
-              <option value="paid">
-                Paid
-              </option>
-
-              <option value="failed">
-                Failed
-              </option>
-
-              <option value="refunded">
-                Refunded
-              </option>
-            </select>
-
-          </div>
+              <img
+                src={item.image}
+                alt={item.name}
+                className="w-14 h-14 rounded-lg object-cover"
+              />
 
 
-          {/* DIVIDER */}
-          <div className="border-t border-[#DDD8CE] my-4"></div>
+              <div className="flex-1 min-w-0">
+
+                <p className="font-semibold text-sm text-[#252525] truncate">
+                  {item.name}
+                </p>
+
+                <p className="text-xs text-[#8A806B]">
+                  ৳{item.price} × {item.quantity}
+                </p>
+
+              </div>
 
 
-          {/* ORDER STATUS */}
+              <p className="font-bold text-sm text-[#252525]">
+                ৳
+                {Number(item.price) *
+                  Number(item.quantity)}
+              </p>
+
+            </div>
+
+          ))}
+
+        </div>
+
+      </div>
+
+
+      {/* =====================================================
+          CONTROL PANEL
+      ===================================================== */}
+      <div className="p-5 border-b border-[#E4E0D7]">
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+
+          {/* Payment status for waiter */}
+          {isWaiterOrder && (
+
+            <div>
+
+              <label className="block text-xs font-bold text-[#77705F] mb-2">
+                Payment Status
+              </label>
+
+              <select
+                value={order.paymentStatus || "paid"}
+                onChange={(e) =>
+                  onUpdatePaymentStatus(
+                    order.id,
+                    e.target.value
+                  )
+                }
+                className="w-full h-10 px-3 rounded-xl border border-[#D8D5CC] bg-white text-sm font-semibold outline-none"
+              >
+
+                <option value="pending">
+                  Pending
+                </option>
+
+                <option value="paid">
+                  Paid
+                </option>
+
+                <option value="failed">
+                  Failed
+                </option>
+
+                <option value="refunded">
+                  Refunded
+                </option>
+
+              </select>
+
+            </div>
+
+          )}
+
+
+          {/* Order Status */}
           <div>
 
-            <h3 className="text-xs font-bold text-[#252525]">
+            <label className="block text-xs font-bold text-[#77705F] mb-2">
               Order Status
-            </h3>
+            </label>
 
             <select
               value={order.orderStatus || "pending"}
               onChange={(e) =>
-                updateOrderStatus(
-                  order.id,
+                onUpdateOrderStatus(
+                  order,
                   e.target.value
                 )
               }
-              className="
-                w-full
-                h-9
-                mt-2.5
-                px-2.5
-                rounded-lg
-                border
-                border-[#D8D5CC]
-                bg-white
-                text-xs
-                font-semibold
-                text-[#252525]
-                outline-none
-                focus:border-[#A08E65]
-              "
+              className="w-full h-10 px-3 rounded-xl border border-[#D8D5CC] bg-white text-sm font-semibold outline-none"
             >
-              <option value="pending">
-                Pending
-              </option>
 
-              <option value="confirmed">
-                Confirmed
-              </option>
+              {isOnlineOrder &&
+                order.paymentStatus !== "paid" ? (
 
-              <option value="preparing">
-                Preparing
-              </option>
+                <>
+                  <option value="pending_payment_verification">
+                    Payment Verification
+                  </option>
 
-              <option value="ready">
-                Ready
-              </option>
+                  <option value="cancelled">
+                    Cancelled
+                  </option>
+                </>
 
-              <option value="delivered">
-                Delivered
-              </option>
+              ) : (
 
-              <option value="completed">
-                Completed
-              </option>
+                <>
+                  <option value="pending">
+                    Pending
+                  </option>
 
-              <option value="cancelled">
-                Cancelled
-              </option>
+                  <option value="confirmed">
+                    Confirmed
+                  </option>
+
+                  <option value="preparing">
+                    Preparing
+                  </option>
+
+                  <option value="ready">
+                    Ready
+                  </option>
+
+                  <option value="delivered">
+                    Delivered
+                  </option>
+
+                  <option value="completed">
+                    Completed
+                  </option>
+
+                  <option value="cancelled">
+                    Cancelled
+                  </option>
+                </>
+
+              )}
+
             </select>
 
           </div>
 
+        </div>
 
-          {/* PRICE */}
-          <div className="border-t border-[#DDD8CE] mt-4 pt-4 space-y-2">
+      </div>
 
-            <div className="flex justify-between text-[11px]">
+
+      {/* =====================================================
+          Price Summary
+      ===================================================== */}
+      <div className="p-5">
+
+        <div className="space-y-2">
+
+          <div className="flex justify-between text-sm">
+
+            <span className="text-[#8A806B]">
+              Subtotal
+            </span>
+
+            <span className="font-semibold">
+              ৳{subtotal}
+            </span>
+
+          </div>
+
+
+          {deliveryFee > 0 && (
+
+            <div className="flex justify-between text-sm">
 
               <span className="text-[#8A806B]">
-                {isWaiterOrder
-                  ? "Food Total"
-                  : "Subtotal"}
+                Delivery Fee
               </span>
 
-              <span className="font-semibold text-[#252525]">
-                ৳{orderSubtotal}
-              </span>
-
-            </div>
-
-
-            {!isWaiterOrder && (
-              <div className="flex justify-between text-[11px]">
-
-                <span className="text-[#8A806B]">
-                  Delivery
-                </span>
-
-                <span className="font-semibold text-[#252525]">
-                  ৳{deliveryFee}
-                </span>
-
-              </div>
-            )}
-
-
-            <div className="flex justify-between pt-2">
-
-              <span className="text-sm font-bold text-[#252525]">
-                Total
-              </span>
-
-              <span className="text-lg font-extrabold text-[#252525]">
-                ৳{Number(order.total || 0)}
+              <span className="font-semibold">
+                ৳{deliveryFee}
               </span>
 
             </div>
+
+          )}
+
+
+          <div className="border-t border-[#E4E0D7] pt-3 flex justify-between">
+
+            <span className="font-bold text-[#252525]">
+              Total
+            </span>
+
+            <span className="text-xl font-extrabold text-[#252525]">
+              ৳{total}
+            </span>
 
           </div>
 
         </div>
 
 
-        {/* ==================================================
-            CUSTOMER NOTE
-        ================================================== */}
-        {!isWaiterOrder && order.customer?.note && (
-          <div className="mt-4 p-3 rounded-xl bg-[#F7F5EF] border border-[#E4E0D7]">
+        {/* Note */}
+        {order.note && (
 
-            <p className="text-[10px] font-bold text-[#252525]">
+          <div className="mt-4 bg-[#F7F5EF] rounded-xl p-4">
+
+            <p className="text-xs font-bold text-[#77705F]">
               Customer Note
             </p>
 
-            <p className="text-xs text-[#8A806B] mt-1">
-              {order.customer.note}
+            <p className="mt-1 text-sm text-[#252525]">
+              {order.note}
             </p>
 
           </div>
+
         )}
 
       </div>
+
     </div>
   );
 };
 
 
-// ======================================================
-// ORDERS PAGE
-// ======================================================
+// =====================================================
+// Main Orders Page
+// =====================================================
 const Orders = () => {
+
+  const { user } = useAuth();
+
   const [orders, setOrders] = useState([]);
+
   const [loading, setLoading] = useState(true);
 
 
-  // ======================================================
-  // REAL-TIME ORDERS
-  // ======================================================
+  // =====================================================
+  // Real-time Orders
+  // =====================================================
   useEffect(() => {
+
     const ordersQuery = query(
       collection(db, "orders"),
       orderBy("createdAt", "desc")
     );
 
+
     const unsubscribe = onSnapshot(
       ordersQuery,
+
       (snapshot) => {
-        const orderList = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+
+        const orderList = snapshot.docs.map(
+          (docSnapshot) => ({
+            id: docSnapshot.id,
+            ...docSnapshot.data(),
+          })
+        );
 
         setOrders(orderList);
+
         setLoading(false);
       },
+
       (error) => {
-        console.error("Orders fetch error:", error);
+
+        console.error(
+          "Error loading orders:",
+          error
+        );
+
         setLoading(false);
       }
     );
 
+
     return () => unsubscribe();
+
   }, []);
 
 
-  // ======================================================
-  // UPDATE ORDER STATUS
-  // ======================================================
+  // =====================================================
+  // Update Order Status
+  // =====================================================
   const updateOrderStatus = async (
-    orderId,
+    order,
     newStatus
   ) => {
+
+    // Online order cannot be confirmed before payment
+    if (
+      order.orderSource !== "waiter" &&
+      order.paymentStatus !== "paid" &&
+      [
+        "confirmed",
+        "preparing",
+        "ready",
+        "delivered",
+        "completed",
+      ].includes(newStatus)
+    ) {
+
+      alert(
+        "Please verify the bKash payment first."
+      );
+
+      return;
+    }
+
+
     try {
+
       await updateDoc(
-        doc(db, "orders", orderId),
+        doc(db, "orders", order.id),
         {
           orderStatus: newStatus,
+          updatedAt: serverTimestamp(),
         }
       );
 
-      console.log(
-        "Order status updated:",
-        newStatus
-      );
     } catch (error) {
+
       console.error(
-        "Status update failed:",
+        "Error updating order:",
         error
       );
 
@@ -594,28 +911,28 @@ const Orders = () => {
   };
 
 
-  // ======================================================
-  // UPDATE PAYMENT STATUS
-  // ======================================================
+  // =====================================================
+  // Update Waiter Payment Status
+  // =====================================================
   const updatePaymentStatus = async (
     orderId,
     newStatus
   ) => {
+
     try {
+
       await updateDoc(
         doc(db, "orders", orderId),
         {
           paymentStatus: newStatus,
+          updatedAt: serverTimestamp(),
         }
       );
 
-      console.log(
-        "Payment status updated:",
-        newStatus
-      );
     } catch (error) {
+
       console.error(
-        "Payment status update failed:",
+        "Error updating payment:",
         error
       );
 
@@ -626,641 +943,616 @@ const Orders = () => {
   };
 
 
-  // ======================================================
-  // FORMAT DATE
-  // ======================================================
-  const formatDate = (timestamp) => {
-    if (!timestamp) {
-      return "Just now";
+  // =====================================================
+  // VERIFY bKASH PAYMENT
+  // =====================================================
+  const verifyBkashPayment = async (order) => {
+
+    const confirmed = window.confirm(
+      `Have you checked your actual bKash transaction history and confirmed that:\n\nTransaction ID: ${order.transactionId}\nAmount: ৳${order.paymentAmount || order.total}\n\nmatches your bKash transaction?`
+    );
+
+
+    if (!confirmed) {
+      return;
     }
+
 
     try {
-      return timestamp
-        .toDate()
-        .toLocaleString("en-BD", {
-          dateStyle: "medium",
-          timeStyle: "short",
-        });
-    } catch {
-      return "Unknown time";
-    }
-  };
 
+      await updateDoc(
+        doc(db, "orders", order.id),
+        {
 
-  // ======================================================
-  // CHECK TODAY
-  // ======================================================
-  const isToday = (timestamp) => {
-    if (!timestamp) {
-      return false;
-    }
+          paymentStatus: "paid",
 
-    try {
-      const date = timestamp.toDate();
-      const today = new Date();
+          orderStatus: "confirmed",
 
-      return (
-        date.getDate() === today.getDate() &&
-        date.getMonth() === today.getMonth() &&
-        date.getFullYear() === today.getFullYear()
+          paymentVerifiedAt:
+            serverTimestamp(),
+
+          paymentVerifiedBy:
+            user?.uid || "",
+
+          updatedAt:
+            serverTimestamp(),
+        }
       );
-    } catch {
-      return false;
+
+
+      alert(
+        "bKash payment verified successfully. Order confirmed."
+      );
+
+    } catch (error) {
+
+      console.error(
+        "Error verifying payment:",
+        error
+      );
+
+      alert(
+        "Failed to verify payment."
+      );
     }
   };
 
 
-  // ======================================================
-  // STATUS CONFIG
-  // ======================================================
-  const statusConfig = {
-    pending: {
-      label: "Pending",
-      icon: <FaClock size={10} />,
-      className:
-        "bg-yellow-50 text-yellow-700 border-yellow-200",
-    },
+  // =====================================================
+  // REJECT bKASH PAYMENT
+  // =====================================================
+  const rejectBkashPayment = async (order) => {
 
-    confirmed: {
-      label: "Confirmed",
-      icon: <FaCheck size={10} />,
-      className:
-        "bg-blue-50 text-blue-700 border-blue-200",
-    },
+    const reason =
+      window.prompt(
+        "Why are you rejecting this payment?\n\nExample: Transaction ID or amount did not match.",
+        "Transaction ID or amount did not match."
+      );
 
-    preparing: {
-      label: "Preparing",
-      icon: <FaUtensils size={10} />,
-      className:
-        "bg-orange-50 text-orange-700 border-orange-200",
-    },
 
-    ready: {
-      label: "Ready",
-      icon: <FaBoxOpen size={10} />,
-      className:
-        "bg-purple-50 text-purple-700 border-purple-200",
-    },
+    if (reason === null) {
+      return;
+    }
 
-    delivered: {
-      label: "Delivered",
-      icon: <FaTruck size={10} />,
-      className:
-        "bg-green-50 text-green-700 border-green-200",
-    },
 
-    completed: {
-      label: "Completed",
-      icon: <FaCheck size={10} />,
-      className:
-        "bg-green-50 text-green-700 border-green-200",
-    },
+    try {
 
-    cancelled: {
-      label: "Cancelled",
-      icon: <FaTimes size={10} />,
-      className:
-        "bg-red-50 text-red-700 border-red-200",
-    },
+      await updateDoc(
+        doc(db, "orders", order.id),
+        {
+
+          paymentStatus: "failed",
+
+          orderStatus: "cancelled",
+
+          paymentRejectedAt:
+            serverTimestamp(),
+
+          paymentRejectedBy:
+            user?.uid || "",
+
+          paymentRejectionReason:
+            reason.trim(),
+
+          updatedAt:
+            serverTimestamp(),
+        }
+      );
+
+
+      alert(
+        "Payment rejected and order cancelled."
+      );
+
+    } catch (error) {
+
+      console.error(
+        "Error rejecting payment:",
+        error
+      );
+
+      alert(
+        "Failed to reject payment."
+      );
+    }
   };
 
 
-  // ======================================================
-  // BASIC COUNTS
-  // ======================================================
-  const pendingCount = orders.filter(
-    (order) =>
-      order.orderStatus === "pending"
-  ).length;
+  // =====================================================
+  // Statistics
+  // =====================================================
 
-  const confirmedCount = orders.filter(
-    (order) =>
-      order.orderStatus === "confirmed"
-  ).length;
+  const pendingCount = useMemo(() => {
 
-  const preparingCount = orders.filter(
-    (order) =>
-      order.orderStatus === "preparing"
-  ).length;
+    return orders.filter(
+      (order) =>
+        order.orderStatus === "pending" ||
+        order.orderStatus ===
+          "pending_payment_verification"
+    ).length;
 
-  const readyCount = orders.filter(
-    (order) =>
-      order.orderStatus === "ready"
-  ).length;
+  }, [orders]);
 
 
-  // ======================================================
-  // WAITER ORDERS
-  // ======================================================
+  const confirmedCount = useMemo(() => {
+
+    return orders.filter(
+      (order) =>
+        order.orderStatus === "confirmed"
+    ).length;
+
+  }, [orders]);
+
+
+  const preparingCount = useMemo(() => {
+
+    return orders.filter(
+      (order) =>
+        order.orderStatus === "preparing"
+    ).length;
+
+  }, [orders]);
+
+
+  const readyCount = useMemo(() => {
+
+    return orders.filter(
+      (order) =>
+        order.orderStatus === "ready"
+    ).length;
+
+  }, [orders]);
+
+
+  const paymentVerificationCount =
+    useMemo(() => {
+
+      return orders.filter(
+        (order) =>
+          order.paymentStatus === "submitted"
+      ).length;
+
+    }, [orders]);
+
+
   const waiterOrders = useMemo(() => {
+
     return orders.filter(
       (order) =>
         order.orderSource === "waiter"
     );
+
   }, [orders]);
 
 
-  // ======================================================
-  // ONLINE ORDERS
-  // ======================================================
   const onlineOrders = useMemo(() => {
+
     return orders.filter(
       (order) =>
         order.orderSource !== "waiter"
     );
+
   }, [orders]);
 
 
-  // ======================================================
-  // TODAY WAITER ORDERS
-  // ======================================================
-  const todayWaiterOrders = useMemo(() => {
-    return waiterOrders.filter(
-      (order) =>
-        isToday(order.createdAt)
-    );
-  }, [waiterOrders]);
+  const todayWaiterOrders =
+    useMemo(() => {
 
-
-  // ======================================================
-  // TODAY WAITER SALES
-  // ======================================================
-  const todayWaiterSales = useMemo(() => {
-    return todayWaiterOrders.reduce(
-      (total, order) =>
-        total + Number(order.total || 0),
-      0
-    );
-  }, [todayWaiterOrders]);
-
-
-  // ======================================================
-  // TODAY TOTAL SALES
-  // ======================================================
-  const todayTotalSales = useMemo(() => {
-    return orders
-      .filter((order) =>
-        isToday(order.createdAt)
-      )
-      .filter(
+      return waiterOrders.filter(
         (order) =>
-          order.paymentStatus === "paid"
-      )
-      .filter(
+          isToday(order.createdAt)
+      );
+
+    }, [waiterOrders]);
+
+
+  const todayOnlineOrders =
+    useMemo(() => {
+
+      return onlineOrders.filter(
         (order) =>
-          order.orderStatus !== "cancelled"
-      )
-      .reduce(
+          isToday(order.createdAt)
+      );
+
+    }, [onlineOrders]);
+
+
+  const todayWaiterSales =
+    useMemo(() => {
+
+      return todayWaiterOrders.reduce(
         (total, order) =>
           total + Number(order.total || 0),
         0
       );
-  }, [orders]);
+
+    }, [todayWaiterOrders]);
 
 
-  // ======================================================
-  // TODAY ONLINE ORDERS
-  // ======================================================
-  const todayOnlineOrders = useMemo(() => {
-    return onlineOrders.filter(
-      (order) =>
-        isToday(order.createdAt)
-    );
-  }, [onlineOrders]);
+  const todayTotalSales =
+    useMemo(() => {
+
+      return orders
+        .filter(
+          (order) =>
+            isToday(order.createdAt) &&
+            order.paymentStatus === "paid" &&
+            order.orderStatus !== "cancelled"
+        )
+        .reduce(
+          (total, order) =>
+            total + Number(order.total || 0),
+          0
+        );
+
+    }, [orders]);
 
 
-  return (
-    <section className="min-h-screen bg-[#F7F5EF] px-3 sm:px-5 lg:px-8 py-6 sm:py-8">
+  // =====================================================
+  // Loading
+  // =====================================================
+  if (loading) {
 
-      <div className="max-w-7xl mx-auto">
+    return (
 
-        {/* ==================================================
-            HEADER
-        ================================================== */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-7">
+      <div className="min-h-screen bg-[#F7F5EF] flex items-center justify-center">
 
-          <div>
-            <p className="text-xs font-semibold tracking-widest uppercase text-[#A08E65]">
-              Cha Buzz Admin
-            </p>
+        <div className="text-center">
 
-            <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#252525] mt-1">
-              Order Management
-            </h1>
+          <span className="loading loading-spinner loading-lg text-[#252525]"></span>
 
-            <p className="text-sm text-[#8A806B] mt-2">
-              Manage customer and restaurant orders in real-time.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2 text-sm font-semibold text-green-700 bg-green-50 border border-green-200 px-4 py-2.5 rounded-xl">
-            <FaSyncAlt
-              className="animate-spin"
-              size={13}
-            />
-            Live Orders
-          </div>
+          <p className="mt-3 text-sm text-[#8A806B]">
+            Loading orders...
+          </p>
 
         </div>
-
-
-        {/* ==================================================
-            BASIC STATS
-        ================================================== */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 mb-7">
-
-          {/* PENDING */}
-          <div className="bg-white border border-[#E4E0D7] rounded-2xl p-4 sm:p-5">
-
-            <div className="flex items-center justify-between">
-
-              <div>
-                <p className="text-xs sm:text-sm text-[#8A806B]">
-                  Pending
-                </p>
-
-                <h2 className="text-2xl sm:text-3xl font-extrabold text-[#252525] mt-1">
-                  {pendingCount}
-                </h2>
-              </div>
-
-              <div className="w-10 h-10 rounded-xl bg-yellow-50 text-yellow-700 flex items-center justify-center">
-                <FaClock />
-              </div>
-
-            </div>
-
-          </div>
-
-
-          {/* CONFIRMED */}
-          <div className="bg-white border border-[#E4E0D7] rounded-2xl p-4 sm:p-5">
-
-            <div className="flex items-center justify-between">
-
-              <div>
-                <p className="text-xs sm:text-sm text-[#8A806B]">
-                  Confirmed
-                </p>
-
-                <h2 className="text-2xl sm:text-3xl font-extrabold text-[#252525] mt-1">
-                  {confirmedCount}
-                </h2>
-              </div>
-
-              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center">
-                <FaCheck />
-              </div>
-
-            </div>
-
-          </div>
-
-
-          {/* PREPARING */}
-          <div className="bg-white border border-[#E4E0D7] rounded-2xl p-4 sm:p-5">
-
-            <div className="flex items-center justify-between">
-
-              <div>
-                <p className="text-xs sm:text-sm text-[#8A806B]">
-                  Preparing
-                </p>
-
-                <h2 className="text-2xl sm:text-3xl font-extrabold text-[#252525] mt-1">
-                  {preparingCount}
-                </h2>
-              </div>
-
-              <div className="w-10 h-10 rounded-xl bg-orange-50 text-orange-700 flex items-center justify-center">
-                <FaUtensils />
-              </div>
-
-            </div>
-
-          </div>
-
-
-          {/* READY */}
-          <div className="bg-white border border-[#E4E0D7] rounded-2xl p-4 sm:p-5">
-
-            <div className="flex items-center justify-between">
-
-              <div>
-                <p className="text-xs sm:text-sm text-[#8A806B]">
-                  Ready
-                </p>
-
-                <h2 className="text-2xl sm:text-3xl font-extrabold text-[#252525] mt-1">
-                  {readyCount}
-                </h2>
-              </div>
-
-              <div className="w-10 h-10 rounded-xl bg-purple-50 text-purple-700 flex items-center justify-center">
-                <FaBoxOpen />
-              </div>
-
-            </div>
-
-          </div>
-
-        </div>
-
-
-        {/* ==================================================
-            BUSINESS STATS
-        ================================================== */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-5 mb-7">
-
-          {/* TODAY WAITER */}
-          <div className="bg-white border border-[#E4E0D7] rounded-2xl p-4 sm:p-5">
-
-            <div className="flex items-center justify-between">
-
-              <div>
-                <p className="text-xs sm:text-sm text-[#8A806B]">
-                  Today's Waiter Orders
-                </p>
-
-                <h2 className="text-2xl sm:text-3xl font-extrabold text-[#252525] mt-1">
-                  {todayWaiterOrders.length}
-                </h2>
-              </div>
-
-              <div className="w-10 h-10 rounded-xl bg-[#F7F5EF] text-[#A08E65] flex items-center justify-center">
-                <FaReceipt />
-              </div>
-
-            </div>
-
-            <p className="text-[11px] text-[#8A806B] mt-3">
-              Offline restaurant orders
-            </p>
-
-          </div>
-
-
-          {/* TODAY WAITER SALES */}
-          <div className="bg-white border border-[#E4E0D7] rounded-2xl p-4 sm:p-5">
-
-            <div className="flex items-center justify-between">
-
-              <div>
-                <p className="text-xs sm:text-sm text-[#8A806B]">
-                  Today's Waiter Sales
-                </p>
-
-                <h2 className="text-2xl sm:text-3xl font-extrabold text-[#252525] mt-1">
-                  ৳{todayWaiterSales}
-                </h2>
-              </div>
-
-              <div className="w-10 h-10 rounded-xl bg-green-50 text-green-700 flex items-center justify-center">
-                <FaMoneyBillWave />
-              </div>
-
-            </div>
-
-            <p className="text-[11px] text-[#8A806B] mt-3">
-              Cash sales recorded by waiter
-            </p>
-
-          </div>
-
-
-          {/* TODAY ONLINE */}
-          <div className="bg-white border border-[#E4E0D7] rounded-2xl p-4 sm:p-5">
-
-            <div className="flex items-center justify-between">
-
-              <div>
-                <p className="text-xs sm:text-sm text-[#8A806B]">
-                  Today's Online Orders
-                </p>
-
-                <h2 className="text-2xl sm:text-3xl font-extrabold text-[#252525] mt-1">
-                  {todayOnlineOrders.length}
-                </h2>
-              </div>
-
-              <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-700 flex items-center justify-center">
-                <FaCreditCard />
-              </div>
-
-            </div>
-
-            <p className="text-[11px] text-[#8A806B] mt-3">
-              Orders placed online
-            </p>
-
-          </div>
-
-
-          {/* TOTAL SALES */}
-          <div className="bg-[#252525] border border-[#252525] rounded-2xl p-4 sm:p-5">
-
-            <div className="flex items-center justify-between">
-
-              <div>
-                <p className="text-xs sm:text-sm text-white/60">
-                  Today's Total Sales
-                </p>
-
-                <h2 className="text-2xl sm:text-3xl font-extrabold text-white mt-1">
-                  ৳{todayTotalSales}
-                </h2>
-              </div>
-
-              <div className="w-10 h-10 rounded-xl bg-white/10 text-white flex items-center justify-center">
-                <FaMoneyBillWave />
-              </div>
-
-            </div>
-
-            <p className="text-[11px] text-white/50 mt-3">
-              Paid orders excluding cancelled
-            </p>
-
-          </div>
-
-        </div>
-
-
-        {/* ==================================================
-            ORDERS SECTION
-        ================================================== */}
-        {loading ? (
-
-          <div className="bg-white border border-[#E4E0D7] rounded-2xl py-20 flex flex-col items-center justify-center">
-
-            <span className="loading loading-spinner loading-lg text-[#252525]"></span>
-
-            <p className="mt-4 text-sm text-[#8A806B]">
-              Loading orders...
-            </p>
-
-          </div>
-
-        ) : (
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-6">
-
-            {/* ==================================================
-                WAITER ORDERS - LEFT
-            ================================================== */}
-            <div>
-
-              <div className="flex items-center justify-between mb-4">
-
-                <div className="flex items-center gap-2.5">
-
-                  <div className="w-9 h-9 rounded-xl bg-[#252525] text-white flex items-center justify-center">
-                    <FaReceipt size={13} />
-                  </div>
-
-                  <div>
-                    <h2 className="text-base sm:text-lg font-extrabold text-[#252525]">
-                      Waiter Orders
-                    </h2>
-
-                    <p className="text-[11px] text-[#8A806B]">
-                      Restaurant / Offline
-                    </p>
-                  </div>
-
-                </div>
-
-                <span className="px-3 py-1.5 rounded-full bg-[#252525] text-white text-xs font-bold">
-                  {waiterOrders.length}
-                </span>
-
-              </div>
-
-
-              {waiterOrders.length === 0 ? (
-
-                <div className="bg-white border border-[#E4E0D7] rounded-2xl py-16 text-center">
-
-                  <div className="w-14 h-14 mx-auto rounded-full bg-[#F7F5EF] flex items-center justify-center">
-                    <FaReceipt
-                      size={22}
-                      className="text-[#A08E65]"
-                    />
-                  </div>
-
-                  <h3 className="text-base font-bold text-[#252525] mt-4">
-                    No Waiter Orders
-                  </h3>
-
-                  <p className="text-xs text-[#8A806B] mt-1.5 px-4">
-                    Waiter orders will appear here automatically.
-                  </p>
-
-                </div>
-
-              ) : (
-
-                <div className="space-y-4">
-
-                  {waiterOrders.map((order) => (
-                    <OrderCard
-                      key={order.id}
-                      order={order}
-                      statusConfig={statusConfig}
-                      updateOrderStatus={updateOrderStatus}
-                      updatePaymentStatus={updatePaymentStatus}
-                      formatDate={formatDate}
-                    />
-                  ))}
-
-                </div>
-
-              )}
-
-            </div>
-
-
-            {/* ==================================================
-                ONLINE ORDERS - RIGHT
-            ================================================== */}
-            <div>
-
-              <div className="flex items-center justify-between mb-4">
-
-                <div className="flex items-center gap-2.5">
-
-                  <div className="w-9 h-9 rounded-xl bg-white border border-[#E4E0D7] text-[#252525] flex items-center justify-center">
-                    <FaGlobe size={13} />
-                  </div>
-
-                  <div>
-                    <h2 className="text-base sm:text-lg font-extrabold text-[#252525]">
-                      Online Orders
-                    </h2>
-
-                    <p className="text-[11px] text-[#8A806B]">
-                      Website / Customer
-                    </p>
-                  </div>
-
-                </div>
-
-                <span className="px-3 py-1.5 rounded-full bg-[#F7F5EF] text-[#252525] border border-[#E4E0D7] text-xs font-bold">
-                  {onlineOrders.length}
-                </span>
-
-              </div>
-
-
-              {onlineOrders.length === 0 ? (
-
-                <div className="bg-white border border-[#E4E0D7] rounded-2xl py-16 text-center">
-
-                  <div className="w-14 h-14 mx-auto rounded-full bg-[#F7F5EF] flex items-center justify-center">
-                    <FaGlobe
-                      size={22}
-                      className="text-[#A08E65]"
-                    />
-                  </div>
-
-                  <h3 className="text-base font-bold text-[#252525] mt-4">
-                    No Online Orders
-                  </h3>
-
-                  <p className="text-xs text-[#8A806B] mt-1.5 px-4">
-                    Customer online orders will appear here automatically.
-                  </p>
-
-                </div>
-
-              ) : (
-
-                <div className="space-y-4">
-
-                  {onlineOrders.map((order) => (
-                    <OrderCard
-                      key={order.id}
-                      order={order}
-                      statusConfig={statusConfig}
-                      updateOrderStatus={updateOrderStatus}
-                      updatePaymentStatus={updatePaymentStatus}
-                      formatDate={formatDate}
-                    />
-                  ))}
-
-                </div>
-
-              )}
-
-            </div>
-
-          </div>
-
-        )}
 
       </div>
 
-    </section>
+    );
+  }
+
+
+  return (
+
+    <div className="min-h-screen bg-[#F7F5EF] py-8 sm:py-10">
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+
+
+        {/* =====================================================
+            HEADER
+        ===================================================== */}
+        <div className="mb-8">
+
+          <h1 className="text-3xl sm:text-4xl font-extrabold text-[#252525]">
+            Order Management
+          </h1>
+
+          <p className="mt-2 text-[#8A806B]">
+            Manage online bKash orders and waiter orders
+            from one place.
+          </p>
+
+        </div>
+
+
+        {/* =====================================================
+            MAIN STATS
+        ===================================================== */}
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+
+
+          <div className="bg-white rounded-2xl border border-[#E4E0D7] p-5">
+
+            <p className="text-xs text-[#8A806B]">
+              Pending
+            </p>
+
+            <p className="mt-1 text-2xl font-extrabold text-[#252525]">
+              {pendingCount}
+            </p>
+
+          </div>
+
+
+          <div className="bg-white rounded-2xl border border-[#E4E0D7] p-5">
+
+            <p className="text-xs text-[#8A806B]">
+              Payment Verification
+            </p>
+
+            <p className="mt-1 text-2xl font-extrabold text-amber-600">
+              {paymentVerificationCount}
+            </p>
+
+          </div>
+
+
+          <div className="bg-white rounded-2xl border border-[#E4E0D7] p-5">
+
+            <p className="text-xs text-[#8A806B]">
+              Confirmed
+            </p>
+
+            <p className="mt-1 text-2xl font-extrabold text-blue-600">
+              {confirmedCount}
+            </p>
+
+          </div>
+
+
+          <div className="bg-white rounded-2xl border border-[#E4E0D7] p-5">
+
+            <p className="text-xs text-[#8A806B]">
+              Preparing
+            </p>
+
+            <p className="mt-1 text-2xl font-extrabold text-purple-600">
+              {preparingCount}
+            </p>
+
+          </div>
+
+
+          <div className="bg-white rounded-2xl border border-[#E4E0D7] p-5">
+
+            <p className="text-xs text-[#8A806B]">
+              Ready
+            </p>
+
+            <p className="mt-1 text-2xl font-extrabold text-green-600">
+              {readyCount}
+            </p>
+
+          </div>
+
+        </div>
+
+
+        {/* =====================================================
+            BUSINESS STATS
+        ===================================================== */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+
+
+          <div className="bg-white rounded-2xl border border-[#E4E0D7] p-5">
+
+            <div className="flex items-center justify-between">
+
+              <div>
+
+                <p className="text-xs text-[#8A806B]">
+                  Today's Total Sales
+                </p>
+
+                <p className="mt-1 text-2xl font-extrabold text-[#252525]">
+                  ৳{todayTotalSales}
+                </p>
+
+              </div>
+
+              <FaMoneyBillWave
+                className="text-[#A08E65]"
+                size={24}
+              />
+
+            </div>
+
+          </div>
+
+
+          <div className="bg-white rounded-2xl border border-[#E4E0D7] p-5">
+
+            <div className="flex items-center justify-between">
+
+              <div>
+
+                <p className="text-xs text-[#8A806B]">
+                  Today's Waiter Sales
+                </p>
+
+                <p className="mt-1 text-2xl font-extrabold text-[#252525]">
+                  ৳{todayWaiterSales}
+                </p>
+
+              </div>
+
+              <FaUserTie
+                className="text-[#A08E65]"
+                size={24}
+              />
+
+            </div>
+
+          </div>
+
+
+          <div className="bg-white rounded-2xl border border-[#E4E0D7] p-5">
+
+            <div className="flex items-center justify-between">
+
+              <div>
+
+                <p className="text-xs text-[#8A806B]">
+                  Today's Online Orders
+                </p>
+
+                <p className="mt-1 text-2xl font-extrabold text-[#252525]">
+                  {todayOnlineOrders.length}
+                </p>
+
+              </div>
+
+              <FaMobileAlt
+                className="text-pink-500"
+                size={24}
+              />
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        {/* =====================================================
+            ORDERS
+        ===================================================== */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+
+
+          {/* =====================================================
+              WAITER ORDERS
+          ===================================================== */}
+          <div>
+
+            <div className="flex items-center justify-between mb-4">
+
+              <div>
+
+                <h2 className="text-xl font-extrabold text-[#252525]">
+                  Waiter Orders
+                </h2>
+
+                <p className="text-sm text-[#8A806B] mt-1">
+                  Orders recorded by waiter
+                </p>
+
+              </div>
+
+              <span className="px-3 py-1 rounded-full bg-white border border-[#E4E0D7] text-sm font-bold">
+                {waiterOrders.length}
+              </span>
+
+            </div>
+
+
+            {waiterOrders.length === 0 ? (
+
+              <div className="bg-white rounded-2xl border border-[#E4E0D7] p-10 text-center">
+
+                <FaUserTie
+                  className="mx-auto text-[#C8C2B5]"
+                  size={32}
+                />
+
+                <p className="mt-3 font-semibold text-[#252525]">
+                  No waiter orders yet.
+                </p>
+
+              </div>
+
+            ) : (
+
+              <div className="space-y-5">
+
+                {waiterOrders.map((order) => (
+
+                  <OrderCard
+                    key={order.id}
+                    order={order}
+                    onUpdateOrderStatus={
+                      updateOrderStatus
+                    }
+                    onUpdatePaymentStatus={
+                      updatePaymentStatus
+                    }
+                    onVerifyPayment={
+                      verifyBkashPayment
+                    }
+                    onRejectPayment={
+                      rejectBkashPayment
+                    }
+                  />
+
+                ))}
+
+              </div>
+
+            )}
+
+          </div>
+
+
+          {/* =====================================================
+              ONLINE ORDERS
+          ===================================================== */}
+          <div>
+
+            <div className="flex items-center justify-between mb-4">
+
+              <div>
+
+                <h2 className="text-xl font-extrabold text-[#252525]">
+                  Online Orders
+                </h2>
+
+                <p className="text-sm text-[#8A806B] mt-1">
+                  bKash advance payment orders
+                </p>
+
+              </div>
+
+              <span className="px-3 py-1 rounded-full bg-pink-50 border border-pink-100 text-sm font-bold text-pink-600">
+                {onlineOrders.length}
+              </span>
+
+            </div>
+
+
+            {onlineOrders.length === 0 ? (
+
+              <div className="bg-white rounded-2xl border border-[#E4E0D7] p-10 text-center">
+
+                <FaMobileAlt
+                  className="mx-auto text-[#C8C2B5]"
+                  size={32}
+                />
+
+                <p className="mt-3 font-semibold text-[#252525]">
+                  No online orders yet.
+                </p>
+
+              </div>
+
+            ) : (
+
+              <div className="space-y-5">
+
+                {onlineOrders.map((order) => (
+
+                  <OrderCard
+                    key={order.id}
+                    order={order}
+                    onUpdateOrderStatus={
+                      updateOrderStatus
+                    }
+                    onUpdatePaymentStatus={
+                      updatePaymentStatus
+                    }
+                    onVerifyPayment={
+                      verifyBkashPayment
+                    }
+                    onRejectPayment={
+                      rejectBkashPayment
+                    }
+                  />
+
+                ))}
+
+              </div>
+
+            )}
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
   );
 };
 

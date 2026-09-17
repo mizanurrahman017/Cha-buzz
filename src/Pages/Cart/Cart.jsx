@@ -7,19 +7,29 @@ import {
   FaLock,
   FaMobileAlt,
   FaCheckCircle,
+  FaCopy,
 } from "react-icons/fa";
-
 import { Link } from "react-router";
-
 import { useCart } from "../../Contexts/CartContext";
 
 import {
   addDoc,
   collection,
+  getDocs,
+  query,
   serverTimestamp,
+  where,
 } from "firebase/firestore";
 
 import { db } from "../../Firebase/Firebase.config";
+
+
+// =====================================================
+// IMPORTANT
+// এখানে তোমার আসল Cha Buzz bKash number বসাবে
+// =====================================================
+const BKASH_NUMBER = "01XXXXXXXXX";
+
 
 const Cart = () => {
   const {
@@ -31,16 +41,6 @@ const Cart = () => {
     clearCart,
   } = useCart();
 
-  // ===============================
-  // Backend API URL
-  // ===============================
-
-  const API_URL = import.meta.env.VITE_API_URL;
-
-  // ===============================
-  // Form Data
-  // ===============================
-
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -50,149 +50,154 @@ const Cart = () => {
     note: "",
   });
 
-  // ===============================
-  // Payment Method
-  // ===============================
+  const [transactionId, setTransactionId] = useState("");
 
-  const [paymentMethod, setPaymentMethod] = useState("");
-
-  // ===============================
-  // Loading
-  // ===============================
+  const [paymentCompleted, setPaymentCompleted] = useState(false);
 
   const [loading, setLoading] = useState(false);
 
-  // ===============================
-  // Payment Information Visible
-  // ===============================
-
-  const [showPaymentInfo, setShowPaymentInfo] = useState(false);
-
-  // ===============================
-  // Delivery
-  // ===============================
+  // Order successfully submitted হলে এই ID থাকবে
+  const [submittedOrderId, setSubmittedOrderId] = useState(null);
 
   const deliveryFee = cartItems.length > 0 ? 50 : 0;
 
-  const grandTotal = Number(totalPrice) + deliveryFee;
+  const grandTotal = Number(totalPrice) + Number(deliveryFee);
 
-  // ===============================
-  // Form Change
-  // ===============================
 
+  // =====================================================
+  // Form change
+  // =====================================================
   const handleChange = (e) => {
     const { name, value } = e.target;
 
-    setFormData((prev) => ({
-      ...prev,
+    setFormData((previous) => ({
+      ...previous,
       [name]: value,
     }));
   };
 
-  // ===============================
-  // Select Payment Method
-  // ===============================
 
-  const handlePaymentSelect = (method) => {
-    setPaymentMethod(method);
-    setShowPaymentInfo(true);
+  // =====================================================
+  // Copy bKash number
+  // =====================================================
+  const handleCopyNumber = async () => {
+    try {
+      await navigator.clipboard.writeText(BKASH_NUMBER);
+      alert("bKash number copied!");
+    } catch (error) {
+      console.error("Copy failed:", error);
+      alert("Please copy the number manually.");
+    }
   };
 
-  // ===============================
-  // Place Order
-  // ===============================
 
+  // =====================================================
+  // Place Order
+  // =====================================================
   const handlePlaceOrder = async (e) => {
     e.preventDefault();
-
-    // ===============================
-    // Cart Check
-    // ===============================
 
     if (cartItems.length === 0) {
       alert("Your cart is empty.");
       return;
     }
 
-    // ===============================
-    // Backend URL Check
-    // ===============================
-
-    if (!API_URL) {
-      alert(
-        "Payment server configuration is missing. Please try again later."
-      );
-
-      console.error(
-        "VITE_API_URL is not configured."
-      );
-
+    if (!formData.name.trim()) {
+      alert("Please enter your name.");
       return;
     }
 
-    // ===============================
-    // Payment Check
-    // ===============================
+    if (!formData.phone.trim()) {
+      alert("Please enter your phone number.");
+      return;
+    }
 
-    if (!paymentMethod) {
+    if (!formData.address.trim()) {
+      alert("Please enter your delivery address.");
+      return;
+    }
+
+    if (!paymentCompleted) {
       alert(
-        "Please select bKash or Nagad payment."
+        `Please send ৳${grandTotal} to our bKash number first.`
       );
       return;
     }
 
-    // ===============================
-    // Required Fields
-    // ===============================
-
-    if (
-      !formData.name.trim() ||
-      !formData.phone.trim() ||
-      !formData.address.trim() ||
-      !formData.postcode.trim()
-    ) {
-      alert(
-        "Please fill in all required fields."
-      );
+    if (!transactionId.trim()) {
+      alert("Please enter your bKash Transaction ID.");
       return;
     }
+
+
+    // =====================================================
+    // Confirm customer actually sent money
+    // =====================================================
+    const confirmPayment = window.confirm(
+      `Have you sent ৳${grandTotal} to bKash number ${BKASH_NUMBER}?`
+    );
+
+    if (!confirmPayment) {
+      return;
+    }
+
 
     try {
       setLoading(true);
 
-      // ===============================
-      // Step 1
-      // Create Pending Firestore Order
-      // ===============================
+      const cleanTransactionId = transactionId.trim();
 
+
+      // =====================================================
+      // Prevent same Transaction ID from being submitted twice
+      // =====================================================
+      const duplicateQuery = query(
+        collection(db, "orders"),
+        where("transactionId", "==", cleanTransactionId)
+      );
+
+      const duplicateSnapshot = await getDocs(
+        duplicateQuery
+      );
+
+      if (!duplicateSnapshot.empty) {
+        alert(
+          "This Transaction ID has already been submitted."
+        );
+
+        setLoading(false);
+        return;
+      }
+
+
+      // =====================================================
+      // Prepare order items
+      // =====================================================
+      const orderItems = cartItems.map((item) => ({
+        id: item.id,
+        name: item.name,
+        price: Number(item.price),
+        quantity: Number(item.quantity),
+        image: item.image || "",
+        category: item.category || "",
+      }));
+
+
+      // =====================================================
+      // Firestore Order
+      // =====================================================
       const orderData = {
-        items: cartItems.map((item) => ({
-          id: item.id,
-
-          name: item.name,
-
-          price: Number(item.price),
-
-          quantity: Number(item.quantity),
-
-          image: item.image || "",
-
-          category: item.category || "",
-        })),
+        items: orderItems,
 
         customer: {
           name: formData.name.trim(),
-
           phone: formData.phone.trim(),
-
           email: formData.email.trim(),
-
           address: formData.address.trim(),
-
           postcode: formData.postcode.trim(),
-
-          note: formData.note.trim(),
         },
+
+        note: formData.note.trim(),
 
         subtotal: Number(totalPrice),
 
@@ -202,207 +207,202 @@ const Cart = () => {
 
         orderSource: "online",
 
-        paymentMethod: paymentMethod,
+        paymentMethod: "bkash",
 
-        paymentStatus: "pending",
+        // Customer submitted payment proof
+        paymentStatus: "submitted",
 
-        orderStatus: "pending",
+        // Admin এখনো verify করেনি
+        orderStatus: "pending_payment_verification",
+
+        // Customer entered TrxID
+        transactionId: cleanTransactionId,
+
+        // Customer says this amount was paid
+        paymentAmount: Number(grandTotal),
 
         createdAt: serverTimestamp(),
+
+        paymentSubmittedAt: serverTimestamp(),
       };
 
+
+      // =====================================================
+      // Save Order
+      // =====================================================
       const orderRef = await addDoc(
         collection(db, "orders"),
         orderData
       );
 
-      console.log(
-        "Pending order created:",
-        orderRef.id
-      );
 
-      // ===============================
-      // Step 2
-      // Create SSLCommerz Session
-      // ===============================
+      // =====================================================
+      // Clear cart after successful submission
+      // =====================================================
+      clearCart();
 
-      const paymentResponse = await fetch(
-        `${API_URL}/api/payment/create`,
-        {
-          method: "POST",
+      setSubmittedOrderId(orderRef.id);
 
-          headers: {
-            "Content-Type": "application/json",
-          },
-
-          body: JSON.stringify({
-            orderId: orderRef.id,
-
-            customer: {
-              name: formData.name.trim(),
-
-              phone: formData.phone.trim(),
-
-              email: formData.email.trim(),
-
-              address: formData.address.trim(),
-
-              postcode: formData.postcode.trim(),
-
-              note: formData.note.trim(),
-            },
-
-            items: cartItems.map((item) => ({
-              id: item.id,
-
-              name: item.name,
-
-              price: Number(item.price),
-
-              quantity: Number(item.quantity),
-
-              category: item.category || "",
-            })),
-
-            subtotal: Number(totalPrice),
-
-            deliveryFee: Number(deliveryFee),
-
-            total: Number(grandTotal),
-          }),
-        }
-      );
-
-      // ===============================
-      // Read Payment Response
-      // ===============================
-
-      const paymentData =
-        await paymentResponse.json();
-
-      console.log(
-        "Payment API response:",
-        paymentData
-      );
-
-      // ===============================
-      // Check Payment Response
-      // ===============================
-
-      if (
-        !paymentResponse.ok ||
-        !paymentData.success
-      ) {
-        throw new Error(
-          paymentData.message ||
-            "Failed to create payment session."
-        );
-      }
-
-      // ===============================
-      // Get Selected Gateway
-      // ===============================
-
-      const selectedPaymentURL =
-        paymentData?.paymentOptions?.[
-          paymentMethod
-        ];
-
-      console.log(
-        "Selected payment method:",
-        paymentMethod
-      );
-
-      console.log(
-        "Selected payment URL:",
-        selectedPaymentURL
-      );
-
-      // ===============================
-      // Redirect To SSLCommerz
-      // ===============================
-
-      if (selectedPaymentURL) {
-        window.location.href =
-          selectedPaymentURL;
-
-        return;
-      }
-
-      // ===============================
-      // Gateway Not Found
-      // ===============================
-
-      throw new Error(
-        `${
-          paymentMethod === "bkash"
-            ? "bKash"
-            : "Nagad"
-        } payment gateway is not available right now.`
-      );
     } catch (error) {
       console.error(
-        "Online payment error:",
+        "Error submitting order:",
         error
       );
 
       alert(
-        error.message ||
-          "Something went wrong while processing your order."
+        "Failed to submit order. Please try again."
       );
-
+    } finally {
       setLoading(false);
     }
   };
 
-  // ===============================
-  // Empty Cart
-  // ===============================
 
+  // =====================================================
+  // ORDER SUBMITTED SCREEN
+  // =====================================================
+  if (submittedOrderId) {
+    return (
+      <div className="min-h-screen bg-[#F7F5EF] flex items-center justify-center px-4 py-12">
+
+        <div className="w-full max-w-xl bg-white rounded-3xl border border-[#E4E0D7] shadow-xl p-6 sm:p-10 text-center">
+
+          <div className="w-20 h-20 mx-auto rounded-full bg-green-100 flex items-center justify-center mb-6">
+            <FaCheckCircle
+              className="text-green-600"
+              size={42}
+            />
+          </div>
+
+          <h1 className="text-2xl sm:text-3xl font-extrabold text-[#252525]">
+            Payment Submitted!
+          </h1>
+
+          <p className="mt-3 text-[#77705F] leading-relaxed">
+            Your order has been submitted successfully.
+            Our admin will verify your bKash payment
+            manually before confirming the order.
+          </p>
+
+
+          <div className="mt-6 bg-[#F7F5EF] rounded-2xl p-5 text-left">
+
+            <p className="text-sm text-[#8A806B]">
+              Order ID
+            </p>
+
+            <p className="mt-1 font-bold text-[#252525] break-all">
+              {submittedOrderId}
+            </p>
+
+
+            <div className="mt-4">
+              <p className="text-sm text-[#8A806B]">
+                Payment Status
+              </p>
+
+              <div className="mt-1 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-100 text-amber-700 text-sm font-semibold">
+                <span className="w-2 h-2 rounded-full bg-amber-500"></span>
+                Waiting for verification
+              </div>
+            </div>
+
+          </div>
+
+
+          <div className="mt-6 bg-pink-50 border border-pink-100 rounded-2xl p-5 text-left">
+
+            <div className="flex items-center gap-3">
+
+              <div className="w-11 h-11 rounded-xl bg-pink-500 text-white flex items-center justify-center">
+                <FaMobileAlt />
+              </div>
+
+              <div>
+                <p className="font-bold text-[#252525]">
+                  bKash Payment
+                </p>
+
+                <p className="text-sm text-[#77705F]">
+                  Transaction ID submitted successfully
+                </p>
+              </div>
+
+            </div>
+
+            <p className="mt-4 text-sm text-[#77705F]">
+              Please keep your bKash transaction information
+              until the order is confirmed.
+            </p>
+
+          </div>
+
+
+          <Link
+            to="/"
+            className="mt-7 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#252525] text-white font-semibold hover:bg-[#A08E65] transition"
+          >
+            <FaArrowLeft size={13} />
+            Back to Home
+          </Link>
+
+        </div>
+
+      </div>
+    );
+  }
+
+
+  // =====================================================
+  // EMPTY CART
+  // =====================================================
   if (cartItems.length === 0) {
     return (
-      <div className="min-h-[70vh] bg-[#F7F5EF] flex items-center justify-center px-4">
-        <div className="text-center max-w-md">
-          <div className="w-20 h-20 mx-auto mb-5 rounded-full bg-white border border-[#E4E0D7] flex items-center justify-center shadow-sm">
-            <FaMobileAlt className="text-2xl text-[#8A806B]" />
+      <div className="min-h-screen bg-[#F7F5EF] flex items-center justify-center px-4">
+
+        <div className="text-center">
+
+          <div className="text-6xl mb-5">
+            🛒
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-extrabold text-[#252525]">
             Your Cart is Empty
           </h1>
 
-          <p className="mt-3 text-sm text-[#8A806B]">
-            Add some delicious food from our menu before checking out.
+          <p className="mt-2 text-[#8A806B]">
+            Add some delicious food to your cart.
           </p>
 
           <Link
             to="/"
-            className="inline-flex items-center gap-2 mt-6 px-6 py-3 rounded-xl bg-[#252525] text-white text-sm font-semibold hover:bg-[#A08E65] transition"
+            className="inline-flex items-center gap-2 mt-6 px-6 py-3 rounded-xl bg-[#252525] text-white font-semibold hover:bg-[#A08E65] transition"
           >
-            <FaArrowLeft size={12} />
+            <FaArrowLeft size={13} />
             Continue Shopping
           </Link>
+
         </div>
+
       </div>
     );
   }
 
-  // ===============================
-  // Main
-  // ===============================
 
   return (
-    <div className="min-h-screen bg-[#F7F5EF] py-8 sm:py-10 lg:py-12">
+    <div className="min-h-screen bg-[#F7F5EF] py-8 sm:py-12">
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
-        {/* ===============================
-            Header
-        =============================== */}
 
+        {/* =====================================================
+            Header
+        ===================================================== */}
         <div className="mb-8">
+
           <Link
             to="/"
-            className="inline-flex items-center gap-2 text-sm font-medium text-[#8A806B] hover:text-[#252525] transition"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-[#77705F] hover:text-[#252525] transition"
           >
             <FaArrowLeft size={12} />
             Continue Shopping
@@ -412,581 +412,452 @@ const Cart = () => {
             Checkout
           </h1>
 
-          <p className="mt-2 text-sm text-[#8A806B]">
-            Review your order and complete your advance payment.
+          <p className="mt-2 text-[#8A806B]">
+            Review your order and complete bKash payment.
           </p>
+
         </div>
 
-        {/* ===============================
-            Grid
-        =============================== */}
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
+        <form onSubmit={handlePlaceOrder}>
 
-          {/* ===============================
-              LEFT SIDE
-          =============================== */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-          <div className="lg:col-span-7 space-y-6">
 
-            {/* ===============================
-                Cart Items
-            =============================== */}
+            {/* =====================================================
+                LEFT SIDE
+            ===================================================== */}
+            <div className="lg:col-span-2 space-y-6">
 
-            <div className="bg-white rounded-2xl border border-[#E4E0D7] shadow-sm overflow-hidden">
 
-              <div className="px-5 py-4 border-b border-[#E4E0D7] flex items-center justify-between">
+              {/* =====================================================
+                  Cart Items
+              ===================================================== */}
+              <div className="bg-white rounded-2xl border border-[#E4E0D7] shadow-sm overflow-hidden">
 
-                <div>
-                  <h2 className="text-lg font-bold text-[#252525]">
+                <div className="px-5 sm:px-6 py-5 border-b border-[#E4E0D7]">
+
+                  <h2 className="text-xl font-bold text-[#252525]">
                     Your Order
                   </h2>
 
-                  <p className="text-xs text-[#8A806B] mt-1">
-                    {cartItems.reduce(
-                      (total, item) =>
-                        total + item.quantity,
-                      0
-                    )}{" "}
-                    items
+                  <p className="text-sm text-[#8A806B] mt-1">
+                    {cartItems.length} food item
+                    {cartItems.length !== 1 ? "s" : ""}
                   </p>
+
                 </div>
 
-                <button
-                  type="button"
-                  onClick={clearCart}
-                  className="text-xs font-semibold text-red-500 hover:text-red-600 transition"
-                >
-                  Clear Cart
-                </button>
+
+                <div className="divide-y divide-[#E4E0D7]">
+
+                  {cartItems.map((item) => (
+
+                    <div
+                      key={item.id}
+                      className="p-4 sm:p-5 flex gap-4"
+                    >
+
+                      <img
+                        src={item.image}
+                        alt={item.name}
+                        className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl object-cover shrink-0"
+                      />
+
+
+                      <div className="flex-1 min-w-0">
+
+                        <div className="flex justify-between gap-3">
+
+                          <div>
+
+                            <h3 className="font-bold text-[#252525] text-sm sm:text-base">
+                              {item.name}
+                            </h3>
+
+                            <p className="text-xs text-[#8A806B] mt-1">
+                              ৳{item.price} each
+                            </p>
+
+                          </div>
+
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              removeFromCart(item.id)
+                            }
+                            className="text-red-400 hover:text-red-600 transition"
+                          >
+                            <FaTrash size={14} />
+                          </button>
+
+                        </div>
+
+
+                        <div className="mt-3 flex items-center justify-between">
+
+                          <div className="flex items-center border border-[#D8D5CC] rounded-lg overflow-hidden">
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                decreaseQuantity(item.id)
+                              }
+                              className="w-8 h-8 flex items-center justify-center hover:bg-[#F7F5EF]"
+                            >
+                              <FaMinus size={10} />
+                            </button>
+
+                            <span className="w-9 text-center text-sm font-bold">
+                              {item.quantity}
+                            </span>
+
+                            <button
+                              type="button"
+                              onClick={() =>
+                                increaseQuantity(item.id)
+                              }
+                              className="w-8 h-8 flex items-center justify-center hover:bg-[#F7F5EF]"
+                            >
+                              <FaPlus size={10} />
+                            </button>
+
+                          </div>
+
+
+                          <p className="font-extrabold text-[#252525]">
+                            ৳
+                            {Number(item.price) *
+                              Number(item.quantity)}
+                          </p>
+
+                        </div>
+
+                      </div>
+
+                    </div>
+
+                  ))}
+
+                </div>
+
               </div>
 
-              <div className="divide-y divide-[#E4E0D7]">
 
-                {cartItems.map((item) => (
-                  <div
-                    key={item.id}
-                    className="p-4 sm:p-5 flex gap-4"
-                  >
+              {/* =====================================================
+                  Customer Information
+              ===================================================== */}
+              <div className="bg-white rounded-2xl border border-[#E4E0D7] shadow-sm p-5 sm:p-6">
 
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl object-cover shrink-0"
+                <h2 className="text-xl font-bold text-[#252525]">
+                  Delivery Information
+                </h2>
+
+                <p className="text-sm text-[#8A806B] mt-1 mb-6">
+                  Enter your information so we can contact you.
+                </p>
+
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+
+
+                  <div>
+
+                    <label className="block text-sm font-semibold text-[#252525] mb-2">
+                      Name *
+                    </label>
+
+                    <input
+                      type="text"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleChange}
+                      placeholder="Your full name"
+                      className="w-full h-11 px-4 rounded-xl border border-[#D8D5CC] outline-none focus:border-[#252525]"
+                      required
                     />
 
-                    <div className="flex-1 min-w-0">
+                  </div>
 
-                      <div className="flex justify-between gap-3">
 
-                        <div>
-                          <h3 className="font-bold text-[#252525] text-sm sm:text-base line-clamp-2">
-                            {item.name}
-                          </h3>
+                  <div>
 
-                          <p className="text-xs text-[#8A806B] mt-1">
-                            ৳{item.price} each
-                          </p>
+                    <label className="block text-sm font-semibold text-[#252525] mb-2">
+                      Phone Number *
+                    </label>
+
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleChange}
+                      placeholder="01XXXXXXXXX"
+                      className="w-full h-11 px-4 rounded-xl border border-[#D8D5CC] outline-none focus:border-[#252525]"
+                      required
+                    />
+
+                  </div>
+
+
+                  <div>
+
+                    <label className="block text-sm font-semibold text-[#252525] mb-2">
+                      Email Address
+                    </label>
+
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleChange}
+                      placeholder="example@email.com"
+                      className="w-full h-11 px-4 rounded-xl border border-[#D8D5CC] outline-none focus:border-[#252525]"
+                    />
+
+                  </div>
+
+
+                  <div>
+
+                    <label className="block text-sm font-semibold text-[#252525] mb-2">
+                      Postcode
+                    </label>
+
+                    <input
+                      type="text"
+                      name="postcode"
+                      value={formData.postcode}
+                      onChange={handleChange}
+                      placeholder="Postcode"
+                      className="w-full h-11 px-4 rounded-xl border border-[#D8D5CC] outline-none focus:border-[#252525]"
+                    />
+
+                  </div>
+
+
+                  <div className="sm:col-span-2">
+
+                    <label className="block text-sm font-semibold text-[#252525] mb-2">
+                      Address *
+                    </label>
+
+                    <textarea
+                      name="address"
+                      value={formData.address}
+                      onChange={handleChange}
+                      placeholder="Enter your complete delivery address"
+                      rows="3"
+                      className="w-full px-4 py-3 rounded-xl border border-[#D8D5CC] outline-none focus:border-[#252525] resize-none"
+                      required
+                    />
+
+                  </div>
+
+
+                  <div className="sm:col-span-2">
+
+                    <label className="block text-sm font-semibold text-[#252525] mb-2">
+                      Note
+                    </label>
+
+                    <textarea
+                      name="note"
+                      value={formData.note}
+                      onChange={handleChange}
+                      placeholder="Any special instruction?"
+                      rows="3"
+                      className="w-full px-4 py-3 rounded-xl border border-[#D8D5CC] outline-none focus:border-[#252525] resize-none"
+                    />
+
+                  </div>
+
+                </div>
+
+              </div>
+
+
+              {/* =====================================================
+                  bKash Payment
+              ===================================================== */}
+              <div className="bg-white rounded-2xl border border-pink-200 shadow-sm overflow-hidden">
+
+                <div className="p-5 sm:p-6">
+
+                  <div className="flex items-center gap-3">
+
+                    <div className="w-12 h-12 rounded-xl bg-pink-500 text-white flex items-center justify-center">
+                      <FaMobileAlt size={20} />
+                    </div>
+
+                    <div>
+
+                      <h2 className="text-xl font-bold text-[#252525]">
+                        bKash Payment
+                      </h2>
+
+                      <p className="text-sm text-[#8A806B]">
+                        Advance payment required
+                      </p>
+
+                    </div>
+
+                  </div>
+
+
+                  {/* Payment instruction */}
+                  <div className="mt-6 bg-pink-50 border border-pink-100 rounded-2xl p-5">
+
+                    <p className="text-sm font-semibold text-[#252525]">
+                      Step 1 — Send exact amount
+                    </p>
+
+                    <p className="mt-2 text-sm text-[#77705F]">
+                      Send exactly
+                    </p>
+
+                    <p className="text-3xl font-extrabold text-pink-600 mt-1">
+                      ৳{grandTotal}
+                    </p>
+
+
+                    <div className="mt-4">
+
+                      <p className="text-xs text-[#8A806B] mb-2">
+                        Send to this bKash number
+                      </p>
+
+
+                      <div className="flex items-center gap-2">
+
+                        <div className="flex-1 h-12 px-4 rounded-xl bg-white border border-pink-200 flex items-center font-extrabold text-lg text-[#252525]">
+                          {BKASH_NUMBER}
                         </div>
+
 
                         <button
                           type="button"
-                          onClick={() =>
-                            removeFromCart(item.id)
-                          }
-                          className="text-[#8A806B] hover:text-red-500 transition"
+                          onClick={handleCopyNumber}
+                          className="h-12 w-12 rounded-xl bg-pink-500 text-white flex items-center justify-center hover:bg-pink-600 transition"
+                          title="Copy number"
                         >
-                          <FaTrash size={13} />
+                          <FaCopy size={15} />
                         </button>
 
                       </div>
 
-                      <div className="mt-3 flex items-center justify-between">
+                    </div>
 
-                        <div className="flex items-center border border-[#D8D5CC] rounded-lg overflow-hidden">
 
-                          <button
-                            type="button"
-                            onClick={() =>
-                              decreaseQuantity(item.id)
-                            }
-                            className="w-8 h-8 flex items-center justify-center text-[#252525] hover:bg-[#F7F5EF] transition"
-                          >
-                            <FaMinus size={10} />
-                          </button>
+                    <div className="mt-5 text-sm text-[#77705F] space-y-1">
 
-                          <span className="w-9 text-center text-sm font-bold text-[#252525]">
-                            {item.quantity}
-                          </span>
+                      <p>
+                        • Send the exact order amount.
+                      </p>
 
-                          <button
-                            type="button"
-                            onClick={() =>
-                              increaseQuantity(item.id)
-                            }
-                            className="w-8 h-8 flex items-center justify-center text-[#252525] hover:bg-[#F7F5EF] transition"
-                          >
-                            <FaPlus size={10} />
-                          </button>
+                      <p>
+                        • Do not send your bKash PIN or OTP to anyone.
+                      </p>
 
-                        </div>
-
-                        <p className="font-extrabold text-[#252525]">
-                          ৳
-                          {Number(item.price) *
-                            Number(item.quantity)}
-                        </p>
-
-                      </div>
+                      <p>
+                        • Keep your transaction ID after payment.
+                      </p>
 
                     </div>
 
                   </div>
-                ))}
 
-              </div>
-            </div>
 
-            {/* ===============================
-                Customer Information
-            =============================== */}
+                  {/* Payment completed checkbox */}
+                  <label className="mt-5 flex items-start gap-3 cursor-pointer">
 
-            <form
-              onSubmit={handlePlaceOrder}
-              id="checkout-form"
-              className="bg-white rounded-2xl border border-[#E4E0D7] shadow-sm overflow-hidden"
-            >
+                    <input
+                      type="checkbox"
+                      checked={paymentCompleted}
+                      onChange={(e) =>
+                        setPaymentCompleted(
+                          e.target.checked
+                        )
+                      }
+                      className="mt-1 w-5 h-5 accent-pink-500"
+                    />
 
-              <div className="px-5 py-4 border-b border-[#E4E0D7]">
-
-                <h2 className="text-lg font-bold text-[#252525]">
-                  Delivery Information
-                </h2>
-
-                <p className="text-xs text-[#8A806B] mt-1">
-                  We need these details to deliver your order.
-                </p>
-
-              </div>
-
-              <div className="p-5 space-y-5">
-
-                {/* Name */}
-
-                <div>
-                  <label className="block text-sm font-semibold text-[#252525] mb-2">
-                    Name{" "}
-                    <span className="text-red-500">
-                      *
+                    <span className="text-sm text-[#252525]">
+                      I have sent{" "}
+                      <strong>
+                        ৳{grandTotal}
+                      </strong>{" "}
+                      to the above bKash number.
                     </span>
+
                   </label>
 
-                  <input
-                    type="text"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    placeholder="Enter your full name"
-                    required
-                    className="w-full h-12 px-4 rounded-xl border border-[#D8D5CC] bg-[#FCFBF8] outline-none text-sm text-[#252525] placeholder:text-[#A8A092] focus:border-[#252525] transition"
-                  />
-                </div>
 
-                {/* Phone */}
+                  {/* Transaction ID */}
+                  <div className="mt-5">
 
-                <div>
-                  <label className="block text-sm font-semibold text-[#252525] mb-2">
-                    Phone Number{" "}
-                    <span className="text-red-500">
-                      *
-                    </span>
-                  </label>
+                    <label className="block text-sm font-semibold text-[#252525] mb-2">
+                      bKash Transaction ID *
+                    </label>
 
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    placeholder="01XXXXXXXXX"
-                    required
-                    className="w-full h-12 px-4 rounded-xl border border-[#D8D5CC] bg-[#FCFBF8] outline-none text-sm text-[#252525] placeholder:text-[#A8A092] focus:border-[#252525] transition"
-                  />
-                </div>
+                    <input
+                      type="text"
+                      value={transactionId}
+                      onChange={(e) =>
+                        setTransactionId(
+                          e.target.value
+                        )
+                      }
+                      placeholder="Enter your bKash TrxID"
+                      className="w-full h-12 px-4 rounded-xl border border-[#D8D5CC] outline-none focus:border-pink-500 uppercase"
+                      required
+                    />
 
-                {/* Email */}
+                    <p className="mt-2 text-xs text-[#8A806B]">
+                      Example: 8KJ7A6B2CD
+                    </p>
 
-                <div>
-                  <label className="block text-sm font-semibold text-[#252525] mb-2">
-                    Email Address{" "}
-                    <span className="text-xs font-normal text-[#8A806B]">
-                      (Optional)
-                    </span>
-                  </label>
+                  </div>
 
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    placeholder="example@gmail.com"
-                    className="w-full h-12 px-4 rounded-xl border border-[#D8D5CC] bg-[#FCFBF8] outline-none text-sm text-[#252525] placeholder:text-[#A8A092] focus:border-[#252525] transition"
-                  />
-                </div>
 
-                {/* Address */}
-
-                <div>
-                  <label className="block text-sm font-semibold text-[#252525] mb-2">
-                    Delivery Address{" "}
-                    <span className="text-red-500">
-                      *
-                    </span>
-                  </label>
-
-                  <textarea
-                    name="address"
-                    value={formData.address}
-                    onChange={handleChange}
-                    placeholder="House/Road, Area, City"
-                    required
-                    rows="3"
-                    className="w-full px-4 py-3 rounded-xl border border-[#D8D5CC] bg-[#FCFBF8] outline-none resize-none text-sm text-[#252525] placeholder:text-[#A8A092] focus:border-[#252525] transition"
-                  />
-                </div>
-
-                {/* Postcode */}
-
-                <div>
-                  <label className="block text-sm font-semibold text-[#252525] mb-2">
-                    Postcode{" "}
-                    <span className="text-red-500">
-                      *
-                    </span>
-                  </label>
-
-                  <input
-                    type="text"
-                    name="postcode"
-                    value={formData.postcode}
-                    onChange={handleChange}
-                    placeholder="e.g. 3100"
-                    required
-                    inputMode="numeric"
-                    maxLength={10}
-                    className="w-full h-12 px-4 rounded-xl border border-[#D8D5CC] bg-[#FCFBF8] outline-none text-sm text-[#252525] placeholder:text-[#A8A092] focus:border-[#252525] transition"
-                  />
-
-                  <p className="mt-1.5 text-[11px] text-[#8A806B]">
-                    Enter the postcode of your delivery area.
-                  </p>
-                </div>
-
-                {/* Note */}
-
-                <div>
-                  <label className="block text-sm font-semibold text-[#252525] mb-2">
-                    Note{" "}
-                    <span className="text-xs font-normal text-[#8A806B]">
-                      (Optional)
-                    </span>
-                  </label>
-
-                  <textarea
-                    name="note"
-                    value={formData.note}
-                    onChange={handleChange}
-                    placeholder="Any special instruction?"
-                    rows="3"
-                    className="w-full px-4 py-3 rounded-xl border border-[#D8D5CC] bg-[#FCFBF8] outline-none resize-none text-sm text-[#252525] placeholder:text-[#A8A092] focus:border-[#252525] transition"
-                  />
-                </div>
-
-                {/* ===============================
-                    Payment Method
-                =============================== */}
-
-                <div>
-
-                  <div className="flex items-center justify-between mb-3">
-
-                    <div>
-                      <label className="block text-sm font-semibold text-[#252525]">
-                        Payment Method
-                      </label>
-
-                      <p className="text-xs text-[#8A806B] mt-1">
-                        Select how you want to pay in advance.
-                      </p>
-                    </div>
+                  {/* Verification notice */}
+                  <div className="mt-5 flex gap-3 bg-[#F7F5EF] rounded-xl p-4">
 
                     <FaLock
-                      className="text-[#8A806B]"
+                      className="mt-0.5 text-[#A08E65] shrink-0"
                       size={14}
                     />
 
-                  </div>
-
-                  {/* Payment Options */}
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-
-                    {/* bKash */}
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handlePaymentSelect("bkash")
-                      }
-                      className={`
-                        relative p-4 rounded-xl border-2 text-left transition-all
-                        ${
-                          paymentMethod === "bkash"
-                            ? "border-[#252525] bg-[#FCFBF8]"
-                            : "border-[#E4E0D7] bg-white hover:border-[#A8A092]"
-                        }
-                      `}
-                    >
-
-                      {paymentMethod === "bkash" && (
-                        <FaCheckCircle
-                          className="absolute top-3 right-3 text-[#252525]"
-                          size={16}
-                        />
-                      )}
-
-                      <div className="flex items-center gap-3">
-
-                        <div className="w-12 h-12 rounded-xl bg-[#E2136E] flex items-center justify-center text-white font-extrabold text-lg">
-                          bK
-                        </div>
-
-                        <div>
-                          <p className="font-bold text-[#252525]">
-                            bKash
-                          </p>
-
-                          <p className="text-xs text-[#8A806B] mt-0.5">
-                            Pay with bKash
-                          </p>
-                        </div>
-
-                      </div>
-
-                    </button>
-
-                    {/* Nagad */}
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handlePaymentSelect("nagad")
-                      }
-                      className={`
-                        relative p-4 rounded-xl border-2 text-left transition-all
-                        ${
-                          paymentMethod === "nagad"
-                            ? "border-[#252525] bg-[#FCFBF8]"
-                            : "border-[#E4E0D7] bg-white hover:border-[#A8A092]"
-                        }
-                      `}
-                    >
-
-                      {paymentMethod === "nagad" && (
-                        <FaCheckCircle
-                          className="absolute top-3 right-3 text-[#252525]"
-                          size={16}
-                        />
-                      )}
-
-                      <div className="flex items-center gap-3">
-
-                        <div className="w-12 h-12 rounded-xl bg-[#F58220] flex items-center justify-center text-white font-extrabold text-lg">
-                          N
-                        </div>
-
-                        <div>
-                          <p className="font-bold text-[#252525]">
-                            Nagad
-                          </p>
-
-                          <p className="text-xs text-[#8A806B] mt-0.5">
-                            Pay with Nagad
-                          </p>
-                        </div>
-
-                      </div>
-
-                    </button>
+                    <p className="text-xs sm:text-sm text-[#77705F] leading-relaxed">
+                      Your payment will be manually verified
+                      by Cha Buzz admin. Your order will only
+                      be confirmed after the Transaction ID
+                      and payment amount match our bKash
+                      transaction record.
+                    </p>
 
                   </div>
-
-                  {/* ===============================
-                      Payment Instructions
-                  =============================== */}
-
-                  {showPaymentInfo &&
-                    paymentMethod && (
-                      <div className="mt-4 rounded-xl border border-[#D8D5CC] bg-[#F7F5EF] p-4">
-
-                        <div className="flex items-start gap-3">
-
-                          <div
-                            className={`
-                              w-10 h-10 rounded-lg flex items-center justify-center text-white shrink-0
-                              ${
-                                paymentMethod === "bkash"
-                                  ? "bg-[#E2136E]"
-                                  : "bg-[#F58220]"
-                              }
-                            `}
-                          >
-                            <FaMobileAlt size={16} />
-                          </div>
-
-                          <div>
-
-                            <h3 className="font-bold text-[#252525] text-sm">
-                              {paymentMethod === "bkash"
-                                ? "How to pay with bKash"
-                                : "How to pay with Nagad"}
-                            </h3>
-
-                            <div className="mt-2 space-y-1.5 text-xs text-[#6F6758]">
-
-                              <p>
-                                <strong>1.</strong>{" "}
-                                Click the payment button below.
-                              </p>
-
-                              <p>
-                                <strong>2.</strong>{" "}
-                                You will be taken to the secure{" "}
-                                {paymentMethod === "bkash"
-                                  ? "bKash"
-                                  : "Nagad"}{" "}
-                                payment page.
-                              </p>
-
-                              <p>
-                                <strong>3.</strong>{" "}
-                                Follow the instructions there and complete your payment.
-                              </p>
-
-                              <p>
-                                <strong>4.</strong>{" "}
-                                Your order will be confirmed after successful payment verification.
-                              </p>
-
-                            </div>
-
-                          </div>
-
-                        </div>
-
-                      </div>
-                    )}
 
                 </div>
-
-                {/* ===============================
-                    Mobile Button
-                =============================== */}
-
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="lg:hidden w-full h-12 rounded-xl bg-[#252525] text-white font-bold text-sm flex items-center justify-center gap-2 hover:bg-[#A08E65] disabled:opacity-60 disabled:cursor-not-allowed transition"
-                >
-
-                  {loading ? (
-                    <>
-                      <span className="loading loading-spinner loading-sm"></span>
-                      Redirecting...
-                    </>
-                  ) : (
-                    <>
-                      <FaLock size={12} />
-
-                      {paymentMethod
-                        ? `Pay ৳${grandTotal} with ${
-                            paymentMethod === "bkash"
-                              ? "bKash"
-                              : "Nagad"
-                          }`
-                        : "Select Payment Method"}
-                    </>
-                  )}
-
-                </button>
-
-                <p className="text-center text-xs text-[#8A806B]">
-                  We'll contact you once the order is confirmed.
-                </p>
 
               </div>
 
-            </form>
+            </div>
 
-          </div>
 
-          {/* ===============================
-              RIGHT SIDE
-          =============================== */}
+            {/* =====================================================
+                RIGHT SIDE — SUMMARY
+            ===================================================== */}
+            <div className="lg:col-span-1">
 
-          <div className="lg:col-span-5">
+              <div className="bg-white rounded-2xl border border-[#E4E0D7] shadow-sm p-5 sm:p-6 lg:sticky lg:top-6">
 
-            <div className="lg:sticky lg:top-6">
+                <h2 className="text-xl font-bold text-[#252525]">
+                  Order Summary
+                </h2>
 
-              <div className="bg-white rounded-2xl border border-[#E4E0D7] shadow-sm overflow-hidden">
 
-                <div className="px-5 py-4 border-b border-[#E4E0D7]">
-
-                  <h2 className="text-lg font-bold text-[#252525]">
-                    Order Summary
-                  </h2>
-
-                </div>
-
-                <div className="p-5">
-
-                  {/* Items */}
-
-                  <div className="space-y-3">
-
-                    {cartItems.map((item) => (
-                      <div
-                        key={item.id}
-                        className="flex items-center justify-between gap-4 text-sm"
-                      >
-
-                        <div className="flex-1 min-w-0">
-
-                          <p className="font-medium text-[#252525] truncate">
-                            {item.name}
-                          </p>
-
-                          <p className="text-xs text-[#8A806B] mt-0.5">
-                            {item.quantity} × ৳{item.price}
-                          </p>
-
-                        </div>
-
-                        <p className="font-semibold text-[#252525]">
-                          ৳
-                          {Number(item.price) *
-                            Number(item.quantity)}
-                        </p>
-
-                      </div>
-                    ))}
-
-                  </div>
-
-                  {/* Divider */}
-
-                  <div className="my-5 border-t border-dashed border-[#D8D5CC]" />
-
-                  {/* Subtotal */}
+                <div className="mt-5 space-y-3">
 
                   <div className="flex justify-between text-sm">
 
@@ -1000,9 +871,8 @@ const Cart = () => {
 
                   </div>
 
-                  {/* Delivery */}
 
-                  <div className="flex justify-between text-sm mt-3">
+                  <div className="flex justify-between text-sm">
 
                     <span className="text-[#8A806B]">
                       Delivery Fee
@@ -1014,9 +884,8 @@ const Cart = () => {
 
                   </div>
 
-                  {/* Total */}
 
-                  <div className="mt-5 pt-5 border-t border-[#E4E0D7] flex justify-between items-center">
+                  <div className="border-t border-[#E4E0D7] pt-4 flex justify-between">
 
                     <span className="font-bold text-[#252525]">
                       Total
@@ -1028,74 +897,65 @@ const Cart = () => {
 
                   </div>
 
-                  {/* Selected Payment */}
+                </div>
 
-                  {paymentMethod && (
-                    <div className="mt-4 p-3 rounded-xl bg-[#F7F5EF] border border-[#E4E0D7]">
 
-                      <div className="flex justify-between items-center">
+                {/* Payment method */}
+                <div className="mt-6 p-4 rounded-xl bg-pink-50 border border-pink-100">
 
-                        <span className="text-xs text-[#8A806B]">
-                          Payment
-                        </span>
+                  <div className="flex items-center gap-3">
 
-                        <span className="text-sm font-bold text-[#252525]">
-                          {paymentMethod === "bkash"
-                            ? "bKash"
-                            : "Nagad"}
-                        </span>
+                    <div className="w-10 h-10 rounded-lg bg-pink-500 text-white flex items-center justify-center">
+                      <FaMobileAlt size={16} />
+                    </div>
 
-                      </div>
+                    <div>
+
+                      <p className="font-bold text-[#252525]">
+                        bKash
+                      </p>
+
+                      <p className="text-xs text-[#8A806B]">
+                        Advance payment
+                      </p>
 
                     </div>
-                  )}
-
-                  {/* Desktop Button */}
-
-                  <button
-                    type="submit"
-                    form="checkout-form"
-                    disabled={loading}
-                    className="hidden lg:flex mt-6 w-full h-12 rounded-xl bg-[#252525] text-white font-bold text-sm items-center justify-center gap-2 hover:bg-[#A08E65] disabled:opacity-60 disabled:cursor-not-allowed transition"
-                  >
-
-                    {loading ? (
-                      <>
-                        <span className="loading loading-spinner loading-sm"></span>
-                        Redirecting...
-                      </>
-                    ) : (
-                      <>
-                        <FaLock size={12} />
-
-                        {paymentMethod
-                          ? `Pay ৳${grandTotal} with ${
-                              paymentMethod === "bkash"
-                                ? "bKash"
-                                : "Nagad"
-                            }`
-                          : "Select Payment Method"}
-                      </>
-                    )}
-
-                  </button>
-
-                  {/* Security */}
-
-                  <div className="mt-5 flex items-start gap-3 p-3 rounded-xl bg-[#F7F5EF]">
-
-                    <FaLock
-                      className="text-[#8A806B] mt-0.5 shrink-0"
-                      size={13}
-                    />
-
-                    <p className="text-[11px] leading-relaxed text-[#8A806B]">
-                      Your payment is processed securely through SSLCOMMERZ. Your order will only be confirmed after successful payment verification.
-                    </p>
 
                   </div>
 
                 </div>
+
+
+                {/* Place Order */}
+                <button
+                  type="submit"
+                  disabled={
+                    loading ||
+                    !paymentCompleted ||
+                    !transactionId.trim()
+                  }
+                  className="mt-6 w-full h-12 rounded-xl bg-[#252525] text-white font-bold flex items-center justify-center gap-2 hover:bg-[#A08E65] disabled:opacity-50 disabled:cursor-not-allowed transition"
+                >
+
+                  {loading ? (
+                    <>
+                      <span className="loading loading-spinner loading-sm"></span>
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <FaCheckCircle size={15} />
+                      Submit Order
+                    </>
+                  )}
+
+                </button>
+
+
+                <p className="mt-4 text-center text-xs text-[#8A806B] leading-relaxed">
+                  We'll contact you once the payment is
+                  verified and your order is confirmed.
+                </p>
 
               </div>
 
@@ -1103,9 +963,10 @@ const Cart = () => {
 
           </div>
 
-        </div>
+        </form>
 
       </div>
+
     </div>
   );
 };

@@ -28,7 +28,7 @@ import { db } from "../../Firebase/Firebase.config";
 // IMPORTANT
 // এখানে তোমার আসল Cha Buzz bKash number বসাবে
 // =====================================================
-const BKASH_NUMBER = "01XXXXXXXXX";
+const BKASH_NUMBER = "01869438544";
 
 
 const Cart = () => {

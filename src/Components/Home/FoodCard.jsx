@@ -5,10 +5,17 @@ import {
 } from "react-icons/fa";
 import { useNavigate } from "react-router";
 import { useCart } from "../../Contexts/CartContext";
+import { useLanguage } from "../../Context/LanguageContext";
 
 const FoodCard = ({ food }) => {
   const navigate = useNavigate();
+
   const { addToCart } = useCart();
+
+  // =========================
+  // GLOBAL LANGUAGE
+  // =========================
+  const { t } = useLanguage();
 
   // =========================
   // Add To Cart
@@ -131,13 +138,12 @@ const FoodCard = ({ food }) => {
         <div className="mt-2 sm:mt-3 mb-4">
 
           <p className="text-[11px] sm:text-xs text-[#8A806B] mb-1">
-            Price
+            {t("price")}
           </p>
 
           <p
             className="
               text-2xl
-              
               font-bold
               leading-none
               text-[#252525]
@@ -183,7 +189,7 @@ const FoodCard = ({ food }) => {
           >
             <FaShoppingCart size={13} />
 
-            Add to Cart
+            {t("addToCart")}
           </button>
 
           {/* BUY NOW */}
@@ -213,7 +219,7 @@ const FoodCard = ({ food }) => {
           >
             <FaBolt size={12} />
 
-            Buy Now
+            {t("buyNow")}
           </button>
 
         </div>

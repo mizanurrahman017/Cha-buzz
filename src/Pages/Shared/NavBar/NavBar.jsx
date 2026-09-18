@@ -5,61 +5,62 @@ import {
 } from "react-icons/fa";
 import { Link } from "react-router";
 import { useCart } from "../../../Contexts/CartContext";
+import { useLanguage } from "../../../Context/LanguageContext";
 
 const NavBar = () => {
   const [search, setSearch] = useState("");
-  const [language, setLanguage] = useState("EN");
 
   const { cartCount } = useCart();
 
-  const isBangla = language === "BN";
+  const {
+    language,
+    isBangla,
+    toggleLanguage,
+    t,
+  } = useLanguage();
 
   const handleSearch = (e) => {
     setSearch(e.target.value);
 
-    // পরে Home-এর food search-এর সাথে connect করতে পারবে
+    // পরে Home food search-এর সাথে connect করতে পারবে
     console.log("Search:", e.target.value);
-  };
-
-  const toggleLanguage = () => {
-    setLanguage(isBangla ? "EN" : "BN");
   };
 
   return (
     <nav className="sticky top-0 z-50 bg-[#F7F3EC] border-b border-[#E2D8CA] shadow-[0_2px_12px_rgba(90,60,30,0.08)]">
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* ================= MAIN NAVBAR ================= */}
+
         <div className="min-h-20 flex items-center justify-between gap-4">
 
           {/* ================= LOGO ================= */}
+
           <Link
             to="/"
             className="flex items-center gap-3 shrink-0 group"
           >
-            {/* Logo */}
             <div className="w-14 h-14 flex items-center rounded-full justify-center overflow-hidden">
               <img
                 src="/cha buzz logo.jpg"
-                alt="Chaa Buzz Logo"
+                alt="Cha Buzz Logo"
                 className="w-full h-full object-contain transition-transform duration-300 group-hover:scale-105"
               />
             </div>
 
-            {/* Brand Name */}
             <div className="hidden xs:block sm:block">
               <h1 className="text-xl sm:text-2xl font-extrabold tracking-wide text-[#5A2E16]">
                 CHAA BUZZ
               </h1>
 
               <p className="text-[10px] sm:text-xs tracking-[0.25em] text-[#9A6A43] font-medium">
-                TEA & FOOD
+                {t("teaAndFood")}
               </p>
             </div>
           </Link>
 
           {/* ================= DESKTOP SEARCH ================= */}
+
           <div className="hidden sm:flex flex-1 max-w-lg relative">
 
             <FaSearch
@@ -77,11 +78,7 @@ const NavBar = () => {
               type="text"
               value={search}
               onChange={handleSearch}
-              placeholder={
-                isBangla
-                  ? "মেনুতে খাবার খুঁজুন..."
-                  : "Search food..."
-              }
+              placeholder={t("searchFood")}
               className="
                 w-full
                 h-12
@@ -106,9 +103,11 @@ const NavBar = () => {
           </div>
 
           {/* ================= RIGHT SIDE ================= */}
+
           <div className="flex items-center gap-2 sm:gap-3">
 
             {/* ================= MOBILE SEARCH ================= */}
+
             <button
               className="
                 sm:hidden
@@ -126,12 +125,13 @@ const NavBar = () => {
                 hover:text-white
                 transition-all
               "
-              title={isBangla ? "খুঁজুন" : "Search"}
+              title={t("searchFood")}
             >
               <FaSearch className="text-sm" />
             </button>
 
             {/* ================= LANGUAGE ================= */}
+
             <button
               onClick={toggleLanguage}
               className="
@@ -161,7 +161,7 @@ const NavBar = () => {
             >
               <span
                 className={
-                  !isBangla
+                  language === "en"
                     ? "text-[#8B4F26] font-bold"
                     : "text-[#A89787]"
                 }
@@ -175,7 +175,7 @@ const NavBar = () => {
 
               <span
                 className={
-                  isBangla
+                  language === "bn"
                     ? "text-[#8B4F26] font-bold"
                     : "text-[#A89787]"
                 }
@@ -185,6 +185,7 @@ const NavBar = () => {
             </button>
 
             {/* ================= CART ================= */}
+
             <Link
               to="/cart"
               className="
@@ -205,11 +206,10 @@ const NavBar = () => {
                 transition-all
                 duration-300
               "
-              title={isBangla ? "কার্ট" : "Cart"}
+              title={t("cart")}
             >
               <FaShoppingCart className="text-sm sm:text-base" />
 
-              {/* Cart Count */}
               {cartCount > 0 && (
                 <span
                   className="
@@ -239,6 +239,7 @@ const NavBar = () => {
         </div>
 
         {/* ================= MOBILE SEARCH ================= */}
+
         <div className="sm:hidden pb-4">
           <div className="relative">
 
@@ -257,11 +258,7 @@ const NavBar = () => {
               type="text"
               value={search}
               onChange={handleSearch}
-              placeholder={
-                isBangla
-                  ? "মেনুতে খাবার খুঁজুন..."
-                  : "Search food..."
-              }
+              placeholder={t("searchFood")}
               className="
                 w-full
                 h-11

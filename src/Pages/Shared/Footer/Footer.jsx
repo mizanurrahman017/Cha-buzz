@@ -19,16 +19,16 @@ const Footer = () => {
 
       {/* ================= MAIN FOOTER ================= */}
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-14">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-10 lg:py-14">
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-7 sm:gap-8 lg:gap-10">
 
           {/* ================= BRAND ================= */}
 
           <div>
-            <div className="flex items-center gap-3 mb-5">
+            <div className="flex items-center gap-3 mb-3 sm:mb-4">
 
-              <div className="w-14 h-14 flex items-center rounded-full justify-center overflow-hidden">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 flex items-center justify-center rounded-full overflow-hidden">
                 <img
                   src="/cha buzz logo.jpg"
                   alt="Cha Buzz Logo"
@@ -37,164 +37,178 @@ const Footer = () => {
               </div>
 
               <div>
-                <h2 className="text-xl font-bold tracking-wider text-[#5A2E16]">
+                <h2 className="text-lg sm:text-xl font-bold tracking-wider text-[#5A2E16]">
                   CHAA BUZZ
                 </h2>
               </div>
 
             </div>
 
-            <p className="text-sm leading-7 text-[#7A6A5C] max-w-xs">
+            <p className="text-xs sm:text-sm leading-6 sm:leading-7 text-[#7A6A5C] max-w-xs">
               {t("freshFoodDescription")}
             </p>
 
             {/* Social Icons */}
 
-            <div className="flex items-center gap-3 mt-6">
+            <div className="flex items-center gap-2.5 mt-4 sm:mt-5">
 
               <a
                 href="#"
-                className="w-10 h-10 rounded-full border border-[#DCCDBB] flex items-center justify-center text-[#6B3D1F] hover:bg-[#8B4F26] hover:text-white hover:border-[#8B4F26] transition-all"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-[#DCCDBB] flex items-center justify-center text-[#6B3D1F] hover:bg-[#8B4F26] hover:text-white hover:border-[#8B4F26] transition-all"
                 aria-label="Facebook"
               >
-                <FaFacebookF className="text-sm" />
+                <FaFacebookF className="text-xs sm:text-sm" />
               </a>
 
               <a
                 href="#"
-                className="w-10 h-10 rounded-full border border-[#DCCDBB] flex items-center justify-center text-[#6B3D1F] hover:bg-[#8B4F26] hover:text-white hover:border-[#8B4F26] transition-all"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-[#DCCDBB] flex items-center justify-center text-[#6B3D1F] hover:bg-[#8B4F26] hover:text-white hover:border-[#8B4F26] transition-all"
                 aria-label="Instagram"
               >
-                <FaInstagram className="text-sm" />
+                <FaInstagram className="text-xs sm:text-sm" />
               </a>
 
               <a
                 href="#"
-                className="w-10 h-10 rounded-full border border-[#DCCDBB] flex items-center justify-center text-[#6B3D1F] hover:bg-[#8B4F26] hover:text-white hover:border-[#8B4F26] transition-all"
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full border border-[#DCCDBB] flex items-center justify-center text-[#6B3D1F] hover:bg-[#8B4F26] hover:text-white hover:border-[#8B4F26] transition-all"
                 aria-label="Twitter"
               >
-                <FaTwitter className="text-sm" />
+                <FaTwitter className="text-xs sm:text-sm" />
               </a>
 
             </div>
           </div>
 
-          {/* ================= QUICK LINKS ================= */}
+          {/* ================= QUICK LINKS + CONTACT ================= */}
 
-          <div>
+          <div className="grid grid-cols-2 gap-5 sm:gap-8 lg:contents">
 
-            <h3 className="text-base font-bold text-[#5A2E16] mb-5">
-              {t("quickLinks")}
-            </h3>
+            {/* ================= QUICK LINKS ================= */}
 
-            <ul className="space-y-3">
+            <div>
 
-              <li>
-                <a
-                  href="/"
-                  className="text-sm text-[#7A6A5C] hover:text-[#8B4F26] transition"
-                >
-                  {t("home")}
-                </a>
-              </li>
+              <h3 className="text-sm sm:text-base font-bold text-[#5A2E16] mb-3 sm:mb-5">
+                {t("quickLinks")}
+              </h3>
 
-              <li>
-                <a
-                  href="/menu"
-                  className="text-sm text-[#7A6A5C] hover:text-[#8B4F26] transition"
-                >
-                  {t("ourMenu")}
-                </a>
-              </li>
+              <ul className="space-y-2 sm:space-y-3">
 
-              <li>
-                <a
-                  href="/about"
-                  className="text-sm text-[#7A6A5C] hover:text-[#8B4F26] transition"
-                >
-                  {t("aboutUs")}
-                </a>
-              </li>
+                <li>
+                  <a
+                    href="/"
+                    className="text-xs sm:text-sm text-[#7A6A5C] hover:text-[#8B4F26] transition"
+                  >
+                    {t("home")}
+                  </a>
+                </li>
 
-              <li>
-                <a
-                  href="/contact"
-                  className="text-sm text-[#7A6A5C] hover:text-[#8B4F26] transition"
-                >
-                  {t("contactUs")}
-                </a>
-              </li>
+                <li>
+                  <a
+                    href="/menu"
+                    className="text-xs sm:text-sm text-[#7A6A5C] hover:text-[#8B4F26] transition"
+                  >
+                    {t("ourMenu")}
+                  </a>
+                </li>
 
-              <li>
-                <a
-                  href="/orders"
-                  className="text-sm text-[#7A6A5C] hover:text-[#8B4F26] transition"
-                >
-                  {t("myOrders")}
-                </a>
-              </li>
+                <li>
+                  <a
+                    href="/about"
+                    className="text-xs sm:text-sm text-[#7A6A5C] hover:text-[#8B4F26] transition"
+                  >
+                    {t("aboutUs")}
+                  </a>
+                </li>
 
-            </ul>
-          </div>
+                <li>
+                  <a
+                    href="/contact"
+                    className="text-xs sm:text-sm text-[#7A6A5C] hover:text-[#8B4F26] transition"
+                  >
+                    {t("contactUs")}
+                  </a>
+                </li>
 
-          {/* ================= CONTACT ================= */}
+                <li>
+                  <a
+                    href="/orders"
+                    className="text-xs sm:text-sm text-[#7A6A5C] hover:text-[#8B4F26] transition"
+                  >
+                    {t("myOrders")}
+                  </a>
+                </li>
 
-          <div>
+              </ul>
 
-            <h3 className="text-base font-bold text-[#5A2E16] mb-5">
-              {t("contact")}
-            </h3>
+            </div>
 
-            <div className="space-y-4">
+            {/* ================= CONTACT ================= */}
 
-              <div className="flex items-start gap-3">
+            <div>
 
-                <FaMapMarkerAlt className="mt-1 text-[#8B4F26]" />
+              <h3 className="text-sm sm:text-base font-bold text-[#5A2E16] mb-3 sm:mb-5">
+                {t("contact")}
+              </h3>
 
-                <p className="text-sm leading-6 text-[#7A6A5C]">
-                  Amberkhana,
-                  <br />
-                  Sylhet, Bangladesh
-                </p>
+              <div className="space-y-3 sm:space-y-4">
 
-              </div>
+                {/* Address */}
 
-              <div className="flex items-center gap-3">
+                <div className="flex items-start gap-2.5">
 
-                <FaPhoneAlt className="text-[#8B4F26]" />
+                  <FaMapMarkerAlt className="mt-1 text-[#8B4F26] text-xs sm:text-sm shrink-0" />
 
-                <p className="text-sm text-[#7A6A5C]">
-                  +880 1XXXXXXXXX
-                </p>
+                  <p className="text-xs sm:text-sm leading-5 sm:leading-6 text-[#7A6A5C]">
+                    Amberkhana,
+                    <br />
+                    Sylhet, Bangladesh
+                  </p>
 
-              </div>
+                </div>
 
-              <div className="flex items-center gap-3">
+                {/* Phone */}
 
-                <FaEnvelope className="text-[#8B4F26]" />
+                <div className="flex items-center gap-2.5">
 
-                <p className="text-sm text-[#7A6A5C]">
-                  hello@chabuzz.com
-                </p>
+                  <FaPhoneAlt className="text-[#8B4F26] text-xs sm:text-sm shrink-0" />
+
+                  <p className="text-xs sm:text-sm text-[#7A6A5C]">
+                    +880 1XXXXXXXXX
+                  </p>
+
+                </div>
+
+                {/* Email */}
+
+                <div className="flex items-start gap-2.5">
+
+                  <FaEnvelope className="mt-1 text-[#8B4F26] text-xs sm:text-sm shrink-0" />
+
+                  <p className="text-xs sm:text-sm text-[#7A6A5C] break-all">
+                    hello@chabuzz.com
+                  </p>
+
+                </div>
 
               </div>
 
             </div>
+
           </div>
 
           {/* ================= OPENING HOURS ================= */}
 
           <div>
 
-            <h3 className="text-base font-bold text-[#5A2E16] mb-5">
+            <h3 className="text-sm sm:text-base font-bold text-[#5A2E16] mb-3 sm:mb-5">
               {t("openingHours")}
             </h3>
 
-            <div className="flex items-start gap-3 mb-5">
+            <div className="flex items-start gap-2.5 mb-4">
 
-              <FaClock className="mt-1 text-[#8B4F26]" />
+              <FaClock className="mt-1 text-[#8B4F26] text-xs sm:text-sm shrink-0" />
 
-              <div className="text-sm text-[#7A6A5C] leading-7">
+              <div className="text-xs sm:text-sm text-[#7A6A5C] leading-6 sm:leading-7">
 
                 <p>
 
@@ -208,7 +222,7 @@ const Footer = () => {
 
                 </p>
 
-                <p className="mt-2">
+                <p className="mt-1.5 sm:mt-2">
 
                   <span className="font-medium text-[#5A2E16]">
                     {t("friday")}
@@ -221,17 +235,21 @@ const Footer = () => {
                 </p>
 
               </div>
+
             </div>
 
-            <div className="inline-flex items-center px-4 py-2 rounded-full bg-[#EDE3D6]">
+            {/* Open Today */}
 
-              <span className="w-2 h-2 rounded-full bg-green-600 mr-2"></span>
+            <div className="inline-flex items-center px-3 py-1.5 rounded-full bg-[#EDE3D6]">
 
-              <span className="text-xs font-medium text-[#6B5A4B]">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-600 mr-2"></span>
+
+              <span className="text-[11px] sm:text-xs font-medium text-[#6B5A4B]">
                 {t("openToday")}
               </span>
 
             </div>
+
           </div>
 
         </div>
@@ -241,11 +259,11 @@ const Footer = () => {
 
       <div className="border-t border-[#DCCDBB]">
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-5">
 
-          <div className="flex flex-col md:flex-row items-center justify-between gap-3">
+          <div className="flex flex-col md:flex-row items-center justify-between gap-2 sm:gap-3">
 
-            <p className="text-xs sm:text-sm text-[#9A8979] text-center md:text-left">
+            <p className="text-[11px] sm:text-xs md:text-sm text-[#9A8979] text-center md:text-left">
 
               © {new Date().getFullYear()}{" "}
 
@@ -257,7 +275,7 @@ const Footer = () => {
 
             </p>
 
-            <div className="flex items-center gap-5 text-xs sm:text-sm text-[#9A8979]">
+            <div className="flex items-center gap-4 sm:gap-5 text-[11px] sm:text-xs md:text-sm text-[#9A8979]">
 
               <a
                 href="/privacy"

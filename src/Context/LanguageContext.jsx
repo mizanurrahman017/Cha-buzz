@@ -131,6 +131,81 @@ const translations = {
         fries: "Fries",
         desserts: "Desserts",
 
+        bkashNumberCopied: "bKash number copied!",
+        copyNumberManually: "Please copy the number manually.",
+        cartEmpty: "Your cart is empty.",
+        enterName: "Please enter your name.",
+        enterPhone: "Please enter your phone number.",
+        enterAddress: "Please enter your delivery address.",
+        sendPaymentFirst: "Please send the required amount to our bKash number first.",
+        enterTransactionId: "Please enter your bKash Transaction ID.",
+        confirmPayment: "Have you sent the required amount to the bKash number?",
+        duplicateTransaction: "This Transaction ID has already been submitted.",
+        submitOrderFailed: "Failed to submit order. Please try again.",
+
+        orderSubmittedSuccessfully:
+            "Your order has been submitted successfully. Our admin will verify your bKash payment manually before confirming the order.",
+
+        orderId: "Order ID",
+        paymentStatus: "Payment Status",
+        waitingVerification: "Waiting for verification",
+        transactionSubmitted: "Transaction ID submitted successfully",
+        keepTransactionInfo:
+            "Please keep your bKash transaction information until the order is confirmed.",
+
+        cartEmptyTitle: "Your Cart is Empty",
+        cartEmptyDescription:
+            "Add some delicious food to your cart.",
+
+        checkoutDescription:
+            "Review your order and complete bKash payment.",
+
+        foodItem: "food item",
+        foodItems: "food items",
+        each: "each",
+
+        enterContactInformation:
+            "Enter your information so we can contact you.",
+
+        fullNamePlaceholder: "Your full name",
+        addressPlaceholder:
+            "Enter your complete delivery address",
+        notePlaceholder:
+            "Any special instruction?",
+
+        step1SendExactAmount:
+            "Step 1 — Send exact amount",
+        sendExactly: "Send exactly",
+        sendToBkashNumber:
+            "Send to this bKash number",
+        copyNumber: "Copy number",
+        sendExactAmount:
+            "Send the exact order amount.",
+        dontSharePinOtp:
+            "Do not send your bKash PIN or OTP to anyone.",
+        keepTransactionId:
+            "Keep your transaction ID after payment.",
+
+        paymentSentConfirmation:
+            "I have sent",
+        toBkashNumberAbove:
+            "to the above bKash number.",
+
+        transactionPlaceholder:
+            "Enter your bKash TrxID",
+        transactionExample:
+            "Example: 8KJ7A6B2CD",
+
+        paymentVerificationNotice:
+            "Your payment will be manually verified by Cha Buzz admin. Your order will only be confirmed after the Transaction ID and payment amount match our bKash transaction record.",
+
+        advancePayment: "Advance payment",
+
+        submitting: "Submitting...",
+
+        paymentContactNotice:
+            "We'll contact you once the payment is verified and your order is confirmed.",
+
         verifyPayment: "Verify Payment",
         rejectPayment: "Reject Payment",
 
@@ -248,6 +323,87 @@ const translations = {
         sandwich: "স্যান্ডউইচ",
         fries: "ফ্রাই",
         desserts: "ডেজার্ট",
+
+        bkashNumberCopied: "বিকাশ নম্বর কপি হয়েছে!",
+        copyNumberManually: "দয়া করে নম্বরটি ম্যানুয়ালি কপি করুন।",
+        cartEmpty: "আপনার কার্ট খালি।",
+        enterName: "আপনার নাম লিখুন।",
+        enterPhone: "আপনার ফোন নম্বর লিখুন।",
+        enterAddress: "আপনার ডেলিভারি ঠিকানা লিখুন।",
+        sendPaymentFirst:
+            "প্রথমে আমাদের বিকাশ নম্বরে প্রয়োজনীয় টাকা পাঠান।",
+        enterTransactionId:
+            "আপনার বিকাশ ট্রানজেকশন আইডি লিখুন।",
+        confirmPayment:
+            "আপনি কি বিকাশ নম্বরে প্রয়োজনীয় টাকা পাঠিয়েছেন?",
+        duplicateTransaction:
+            "এই ট্রানজেকশন আইডি ইতিমধ্যে সাবমিট করা হয়েছে।",
+        submitOrderFailed:
+            "অর্ডার সাবমিট করা যায়নি। আবার চেষ্টা করুন।",
+
+        orderSubmittedSuccessfully:
+            "আপনার অর্ডার সফলভাবে সাবমিট হয়েছে। অর্ডার নিশ্চিত করার আগে আমাদের অ্যাডমিন আপনার বিকাশ পেমেন্ট ম্যানুয়ালি যাচাই করবেন।",
+
+        orderId: "অর্ডার আইডি",
+        paymentStatus: "পেমেন্ট স্ট্যাটাস",
+        waitingVerification: "ভেরিফিকেশনের অপেক্ষায়",
+        transactionSubmitted:
+            "ট্রানজেকশন আইডি সফলভাবে সাবমিট হয়েছে",
+        keepTransactionInfo:
+            "অর্ডার কনফার্ম না হওয়া পর্যন্ত আপনার বিকাশ ট্রানজেকশনের তথ্য সংরক্ষণ করুন।",
+
+        cartEmptyTitle: "আপনার কার্ট খালি",
+        cartEmptyDescription:
+            "আপনার পছন্দের কিছু সুস্বাদু খাবার কার্টে যোগ করুন।",
+
+        checkoutDescription:
+            "আপনার অর্ডার দেখুন এবং বিকাশ পেমেন্ট সম্পন্ন করুন।",
+
+        foodItem: "টি খাবার",
+        foodItems: "টি খাবার",
+        each: "প্রতি পিস",
+
+        enterContactInformation:
+            "যোগাযোগের জন্য আপনার তথ্য দিন।",
+
+        fullNamePlaceholder: "আপনার পুরো নাম",
+        addressPlaceholder:
+            "আপনার সম্পূর্ণ ডেলিভারি ঠিকানা লিখুন",
+        notePlaceholder:
+            "কোনো বিশেষ নির্দেশনা?",
+
+        step1SendExactAmount:
+            "ধাপ ১ — সঠিক পরিমাণ টাকা পাঠান",
+        sendExactly: "সঠিক পরিমাণ পাঠান",
+        sendToBkashNumber:
+            "এই বিকাশ নম্বরে পাঠান",
+        copyNumber: "নম্বর কপি করুন",
+        sendExactAmount:
+            "অর্ডারের সঠিক পরিমাণ টাকা পাঠান।",
+        dontSharePinOtp:
+            "আপনার বিকাশ PIN বা OTP কারো সাথে শেয়ার করবেন না।",
+        keepTransactionId:
+            "পেমেন্টের পর আপনার ট্রানজেকশন আইডি সংরক্ষণ করুন।",
+
+        paymentSentConfirmation:
+            "আমি পাঠিয়েছি",
+        toBkashNumberAbove:
+            "উপরের বিকাশ নম্বরে।",
+
+        transactionPlaceholder:
+            "আপনার বিকাশ TrxID লিখুন",
+        transactionExample:
+            "উদাহরণ: 8KJ7A6B2CD",
+
+        paymentVerificationNotice:
+            "আপনার পেমেন্ট Cha Buzz অ্যাডমিন ম্যানুয়ালি যাচাই করবেন। ট্রানজেকশন আইডি এবং পেমেন্টের পরিমাণ আমাদের বিকাশ ট্রানজেকশন রেকর্ডের সাথে মিললে অর্ডার নিশ্চিত করা হবে।",
+
+        advancePayment: "অগ্রিম পেমেন্ট",
+
+        submitting: "সাবমিট হচ্ছে...",
+
+        paymentContactNotice:
+            "পেমেন্ট যাচাই এবং অর্ডার নিশ্চিত হওয়ার পর আমরা আপনার সাথে যোগাযোগ করব।",
 
 
 

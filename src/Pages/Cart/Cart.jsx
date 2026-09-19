@@ -22,14 +22,12 @@ import {
 } from "firebase/firestore";
 
 import { db } from "../../Firebase/Firebase.config";
-
+import { useLanguage } from "../../Context/LanguageContext";
 
 // =====================================================
-// IMPORTANT
-// এখানে তোমার আসল Cha Buzz bKash number বসাবে
+// Cha Buzz bKash number
 // =====================================================
 const BKASH_NUMBER = "01869438544";
-
 
 const Cart = () => {
   const {
@@ -41,28 +39,22 @@ const Cart = () => {
     clearCart,
   } = useCart();
 
+  const { t } = useLanguage();
+
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
-    email: "",
     address: "",
-    postcode: "",
     note: "",
   });
 
   const [transactionId, setTransactionId] = useState("");
-
   const [paymentCompleted, setPaymentCompleted] = useState(false);
-
   const [loading, setLoading] = useState(false);
-
-  // Order successfully submitted হলে এই ID থাকবে
   const [submittedOrderId, setSubmittedOrderId] = useState(null);
 
   const deliveryFee = cartItems.length > 0 ? 50 : 0;
-
   const grandTotal = Number(totalPrice) + Number(deliveryFee);
-
 
   // =====================================================
   // Form change
@@ -76,20 +68,24 @@ const Cart = () => {
     }));
   };
 
-
   // =====================================================
   // Copy bKash number
   // =====================================================
   const handleCopyNumber = async () => {
     try {
       await navigator.clipboard.writeText(BKASH_NUMBER);
-      alert("bKash number copied!");
+      alert(
+        t("bkashNumberCopied") || "bKash number copied!"
+      );
     } catch (error) {
       console.error("Copy failed:", error);
-      alert("Please copy the number manually.");
+
+      alert(
+        t("copyNumberManually") ||
+          "Please copy the number manually."
+      );
     }
   };
-
 
   // =====================================================
   // Place Order
@@ -98,62 +94,76 @@ const Cart = () => {
     e.preventDefault();
 
     if (cartItems.length === 0) {
-      alert("Your cart is empty.");
+      alert(t("cartEmpty") || "Your cart is empty.");
       return;
     }
 
     if (!formData.name.trim()) {
-      alert("Please enter your name.");
+      alert(
+        t("enterName") || "Please enter your name."
+      );
       return;
     }
 
     if (!formData.phone.trim()) {
-      alert("Please enter your phone number.");
+      alert(
+        t("enterPhone") ||
+          "Please enter your phone number."
+      );
       return;
     }
 
     if (!formData.address.trim()) {
-      alert("Please enter your delivery address.");
+      alert(
+        t("enterAddress") ||
+          "Please enter your delivery address."
+      );
       return;
     }
 
     if (!paymentCompleted) {
       alert(
-        `Please send ৳${grandTotal} to our bKash number first.`
+        t("sendPaymentFirst") ||
+          `Please send ৳${grandTotal} to our bKash number first.`
       );
       return;
     }
 
     if (!transactionId.trim()) {
-      alert("Please enter your bKash Transaction ID.");
+      alert(
+        t("enterTransactionId") ||
+          "Please enter your bKash Transaction ID."
+      );
       return;
     }
 
-
     // =====================================================
-    // Confirm customer actually sent money
+    // Confirm payment
     // =====================================================
     const confirmPayment = window.confirm(
-      `Have you sent ৳${grandTotal} to bKash number ${BKASH_NUMBER}?`
+      t("confirmPayment") ||
+        `Have you sent ৳${grandTotal} to bKash number ${BKASH_NUMBER}?`
     );
 
     if (!confirmPayment) {
       return;
     }
 
-
     try {
       setLoading(true);
 
       const cleanTransactionId = transactionId.trim();
 
-
       // =====================================================
-      // Prevent same Transaction ID from being submitted twice
+      // Prevent duplicate Transaction ID
       // =====================================================
       const duplicateQuery = query(
         collection(db, "orders"),
-        where("transactionId", "==", cleanTransactionId)
+        where(
+          "transactionId",
+          "==",
+          cleanTransactionId
+        )
       );
 
       const duplicateSnapshot = await getDocs(
@@ -162,13 +172,13 @@ const Cart = () => {
 
       if (!duplicateSnapshot.empty) {
         alert(
-          "This Transaction ID has already been submitted."
+          t("duplicateTransaction") ||
+            "This Transaction ID has already been submitted."
         );
 
         setLoading(false);
         return;
       }
-
 
       // =====================================================
       // Prepare order items
@@ -182,7 +192,6 @@ const Cart = () => {
         category: item.category || "",
       }));
 
-
       // =====================================================
       // Firestore Order
       // =====================================================
@@ -192,9 +201,7 @@ const Cart = () => {
         customer: {
           name: formData.name.trim(),
           phone: formData.phone.trim(),
-          email: formData.email.trim(),
           address: formData.address.trim(),
-          postcode: formData.postcode.trim(),
         },
 
         note: formData.note.trim(),
@@ -226,7 +233,6 @@ const Cart = () => {
         paymentSubmittedAt: serverTimestamp(),
       };
 
-
       // =====================================================
       // Save Order
       // =====================================================
@@ -235,14 +241,12 @@ const Cart = () => {
         orderData
       );
 
-
       // =====================================================
-      // Clear cart after successful submission
+      // Clear cart
       // =====================================================
       clearCart();
 
       setSubmittedOrderId(orderRef.id);
-
     } catch (error) {
       console.error(
         "Error submitting order:",
@@ -250,13 +254,13 @@ const Cart = () => {
       );
 
       alert(
-        "Failed to submit order. Please try again."
+        t("submitOrderFailed") ||
+          "Failed to submit order. Please try again."
       );
     } finally {
       setLoading(false);
     }
   };
-
 
   // =====================================================
   // ORDER SUBMITTED SCREEN
@@ -264,7 +268,6 @@ const Cart = () => {
   if (submittedOrderId) {
     return (
       <div className="min-h-screen bg-[#F7F5EF] flex items-center justify-center px-4 py-12">
-
         <div className="w-full max-w-xl bg-white rounded-3xl border border-[#E4E0D7] shadow-xl p-6 sm:p-10 text-center">
 
           <div className="w-20 h-20 mx-auto rounded-full bg-green-100 flex items-center justify-center mb-6">
@@ -275,40 +278,38 @@ const Cart = () => {
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-extrabold text-[#252525]">
-            Payment Submitted!
+            {t("paymentSubmitted")}
           </h1>
 
           <p className="mt-3 text-[#77705F] leading-relaxed">
-            Your order has been submitted successfully.
-            Our admin will verify your bKash payment
-            manually before confirming the order.
+            {t("orderSubmittedSuccessfully") ||
+              "Your order has been submitted successfully. Our admin will verify your bKash payment manually before confirming the order."}
           </p>
-
 
           <div className="mt-6 bg-[#F7F5EF] rounded-2xl p-5 text-left">
 
             <p className="text-sm text-[#8A806B]">
-              Order ID
+              {t("orderId") || "Order ID"}
             </p>
 
             <p className="mt-1 font-bold text-[#252525] break-all">
               {submittedOrderId}
             </p>
 
-
             <div className="mt-4">
               <p className="text-sm text-[#8A806B]">
-                Payment Status
+                {t("paymentStatus") ||
+                  "Payment Status"}
               </p>
 
               <div className="mt-1 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-100 text-amber-700 text-sm font-semibold">
                 <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-                Waiting for verification
+
+                {t("waitingVerification") ||
+                  "Waiting for verification"}
               </div>
             </div>
-
           </div>
-
 
           <div className="mt-6 bg-pink-50 border border-pink-100 rounded-2xl p-5 text-left">
 
@@ -320,38 +321,33 @@ const Cart = () => {
 
               <div>
                 <p className="font-bold text-[#252525]">
-                  bKash Payment
+                  {t("bkashPayment")}
                 </p>
 
                 <p className="text-sm text-[#77705F]">
-                  Transaction ID submitted successfully
+                  {t("transactionSubmitted") ||
+                    "Transaction ID submitted successfully"}
                 </p>
               </div>
-
             </div>
 
             <p className="mt-4 text-sm text-[#77705F]">
-              Please keep your bKash transaction information
-              until the order is confirmed.
+              {t("keepTransactionInfo") ||
+                "Please keep your bKash transaction information until the order is confirmed."}
             </p>
-
           </div>
-
 
           <Link
             to="/"
             className="mt-7 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#252525] text-white font-semibold hover:bg-[#A08E65] transition"
           >
             <FaArrowLeft size={13} />
-            Back to Home
+            {t("backToHome")}
           </Link>
-
         </div>
-
       </div>
     );
   }
-
 
   // =====================================================
   // EMPTY CART
@@ -367,11 +363,13 @@ const Cart = () => {
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-extrabold text-[#252525]">
-            Your Cart is Empty
+            {t("cartEmptyTitle") ||
+              "Your Cart is Empty"}
           </h1>
 
           <p className="mt-2 text-[#8A806B]">
-            Add some delicious food to your cart.
+            {t("cartEmptyDescription") ||
+              "Add some delicious food to your cart."}
           </p>
 
           <Link
@@ -379,21 +377,18 @@ const Cart = () => {
             className="inline-flex items-center gap-2 mt-6 px-6 py-3 rounded-xl bg-[#252525] text-white font-semibold hover:bg-[#A08E65] transition"
           >
             <FaArrowLeft size={13} />
-            Continue Shopping
+            {t("continueShopping")}
           </Link>
 
         </div>
-
       </div>
     );
   }
-
 
   return (
     <div className="min-h-screen bg-[#F7F5EF] py-8 sm:py-12">
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
 
         {/* =====================================================
             Header
@@ -405,30 +400,28 @@ const Cart = () => {
             className="inline-flex items-center gap-2 text-sm font-semibold text-[#77705F] hover:text-[#252525] transition"
           >
             <FaArrowLeft size={12} />
-            Continue Shopping
+            {t("continueShopping")}
           </Link>
 
           <h1 className="mt-4 text-3xl sm:text-4xl font-extrabold text-[#252525]">
-            Checkout
+            {t("checkout")}
           </h1>
 
           <p className="mt-2 text-[#8A806B]">
-            Review your order and complete bKash payment.
+            {t("checkoutDescription") ||
+              "Review your order and complete bKash payment."}
           </p>
 
         </div>
-
 
         <form onSubmit={handlePlaceOrder}>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-
             {/* =====================================================
                 LEFT SIDE
             ===================================================== */}
             <div className="lg:col-span-2 space-y-6">
-
 
               {/* =====================================================
                   Cart Items
@@ -438,21 +431,21 @@ const Cart = () => {
                 <div className="px-5 sm:px-6 py-5 border-b border-[#E4E0D7]">
 
                   <h2 className="text-xl font-bold text-[#252525]">
-                    Your Order
+                    {t("yourOrder")}
                   </h2>
 
                   <p className="text-sm text-[#8A806B] mt-1">
-                    {cartItems.length} food item
-                    {cartItems.length !== 1 ? "s" : ""}
+                    {cartItems.length}{" "}
+                    {cartItems.length !== 1
+                      ? t("foodItems")
+                      : t("foodItem")}
                   </p>
 
                 </div>
 
-
                 <div className="divide-y divide-[#E4E0D7]">
 
                   {cartItems.map((item) => (
-
                     <div
                       key={item.id}
                       className="p-4 sm:p-5 flex gap-4"
@@ -463,7 +456,6 @@ const Cart = () => {
                         alt={item.name}
                         className="w-20 h-20 sm:w-24 sm:h-24 rounded-xl object-cover shrink-0"
                       />
-
 
                       <div className="flex-1 min-w-0">
 
@@ -476,11 +468,11 @@ const Cart = () => {
                             </h3>
 
                             <p className="text-xs text-[#8A806B] mt-1">
-                              ৳{item.price} each
+                              ৳{item.price}{" "}
+                              {t("each")}
                             </p>
 
                           </div>
-
 
                           <button
                             type="button"
@@ -493,7 +485,6 @@ const Cart = () => {
                           </button>
 
                         </div>
-
 
                         <div className="mt-3 flex items-center justify-between">
 
@@ -525,7 +516,6 @@ const Cart = () => {
 
                           </div>
 
-
                           <p className="font-extrabold text-[#252525]">
                             ৳
                             {Number(item.price) *
@@ -533,17 +523,12 @@ const Cart = () => {
                           </p>
 
                         </div>
-
                       </div>
-
                     </div>
-
                   ))}
 
                 </div>
-
               </div>
-
 
               {/* =====================================================
                   Customer Information
@@ -551,21 +536,21 @@ const Cart = () => {
               <div className="bg-white rounded-2xl border border-[#E4E0D7] shadow-sm p-5 sm:p-6">
 
                 <h2 className="text-xl font-bold text-[#252525]">
-                  Delivery Information
+                  {t("customerInformation") ||
+                    "Delivery Information"}
                 </h2>
 
                 <p className="text-sm text-[#8A806B] mt-1 mb-6">
-                  Enter your information so we can contact you.
+                  {t("enterContactInformation") ||
+                    "Enter your information so we can contact you."}
                 </p>
-
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
-
+                  {/* Name */}
                   <div>
-
                     <label className="block text-sm font-semibold text-[#252525] mb-2">
-                      Name *
+                      {t("name")} *
                     </label>
 
                     <input
@@ -573,18 +558,19 @@ const Cart = () => {
                       name="name"
                       value={formData.name}
                       onChange={handleChange}
-                      placeholder="Your full name"
+                      placeholder={
+                        t("fullNamePlaceholder") ||
+                        "Your full name"
+                      }
                       className="w-full h-11 px-4 rounded-xl border border-[#D8D5CC] outline-none focus:border-[#252525]"
                       required
                     />
-
                   </div>
 
-
+                  {/* Phone */}
                   <div>
-
                     <label className="block text-sm font-semibold text-[#252525] mb-2">
-                      Phone Number *
+                      {t("phoneNumber")} *
                     </label>
 
                     <input
@@ -596,76 +582,44 @@ const Cart = () => {
                       className="w-full h-11 px-4 rounded-xl border border-[#D8D5CC] outline-none focus:border-[#252525]"
                       required
                     />
-
                   </div>
 
-
-                  <div>
-
-                    <label className="block text-sm font-semibold text-[#252525] mb-2">
-                      Email Address
-                    </label>
-
-                    <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleChange}
-                      placeholder="example@email.com"
-                      className="w-full h-11 px-4 rounded-xl border border-[#D8D5CC] outline-none focus:border-[#252525]"
-                    />
-
-                  </div>
-
-
-                  <div>
-
-                    <label className="block text-sm font-semibold text-[#252525] mb-2">
-                      Postcode
-                    </label>
-
-                    <input
-                      type="text"
-                      name="postcode"
-                      value={formData.postcode}
-                      onChange={handleChange}
-                      placeholder="Postcode"
-                      className="w-full h-11 px-4 rounded-xl border border-[#D8D5CC] outline-none focus:border-[#252525]"
-                    />
-
-                  </div>
-
-
+                  {/* Address */}
                   <div className="sm:col-span-2">
 
                     <label className="block text-sm font-semibold text-[#252525] mb-2">
-                      Address *
+                      {t("address")} *
                     </label>
 
                     <textarea
                       name="address"
                       value={formData.address}
                       onChange={handleChange}
-                      placeholder="Enter your complete delivery address"
+                      placeholder={
+                        t("addressPlaceholder") ||
+                        "Enter your complete delivery address"
+                      }
                       rows="3"
                       className="w-full px-4 py-3 rounded-xl border border-[#D8D5CC] outline-none focus:border-[#252525] resize-none"
                       required
                     />
-
                   </div>
 
-
+                  {/* Note */}
                   <div className="sm:col-span-2">
 
                     <label className="block text-sm font-semibold text-[#252525] mb-2">
-                      Note
+                      {t("note")}
                     </label>
 
                     <textarea
                       name="note"
                       value={formData.note}
                       onChange={handleChange}
-                      placeholder="Any special instruction?"
+                      placeholder={
+                        t("notePlaceholder") ||
+                        "Any special instruction?"
+                      }
                       rows="3"
                       className="w-full px-4 py-3 rounded-xl border border-[#D8D5CC] outline-none focus:border-[#252525] resize-none"
                     />
@@ -673,9 +627,7 @@ const Cart = () => {
                   </div>
 
                 </div>
-
               </div>
-
 
               {/* =====================================================
                   bKash Payment
@@ -693,40 +645,39 @@ const Cart = () => {
                     <div>
 
                       <h2 className="text-xl font-bold text-[#252525]">
-                        bKash Payment
+                        {t("bkashPayment")}
                       </h2>
 
                       <p className="text-sm text-[#8A806B]">
-                        Advance payment required
+                        {t("advancePaymentRequired")}
                       </p>
 
                     </div>
-
                   </div>
-
 
                   {/* Payment instruction */}
                   <div className="mt-6 bg-pink-50 border border-pink-100 rounded-2xl p-5">
 
                     <p className="text-sm font-semibold text-[#252525]">
-                      Step 1 — Send exact amount
+                      {t("step1SendExactAmount") ||
+                        "Step 1 — Send exact amount"}
                     </p>
 
                     <p className="mt-2 text-sm text-[#77705F]">
-                      Send exactly
+                      {t("sendExactly") ||
+                        "Send exactly"}
                     </p>
 
                     <p className="text-3xl font-extrabold text-pink-600 mt-1">
                       ৳{grandTotal}
                     </p>
 
-
                     <div className="mt-4">
 
                       <p className="text-xs text-[#8A806B] mb-2">
-                        Send to this bKash number
+                        {t("sendToBkashNumber") ||
+                          "Send to this bKash number"}
                       </p>
-
 
                       <div className="flex items-center gap-2">
 
@@ -734,39 +685,43 @@ const Cart = () => {
                           {BKASH_NUMBER}
                         </div>
 
-
                         <button
                           type="button"
                           onClick={handleCopyNumber}
                           className="h-12 w-12 rounded-xl bg-pink-500 text-white flex items-center justify-center hover:bg-pink-600 transition"
-                          title="Copy number"
+                          title={
+                            t("copyNumber") ||
+                            "Copy number"
+                          }
                         >
                           <FaCopy size={15} />
                         </button>
 
                       </div>
-
                     </div>
-
 
                     <div className="mt-5 text-sm text-[#77705F] space-y-1">
 
                       <p>
-                        • Send the exact order amount.
+                        •{" "}
+                        {t("sendExactAmount") ||
+                          "Send the exact order amount."}
                       </p>
 
                       <p>
-                        • Do not send your bKash PIN or OTP to anyone.
+                        •{" "}
+                        {t("dontSharePinOtp") ||
+                          "Do not send your bKash PIN or OTP to anyone."}
                       </p>
 
                       <p>
-                        • Keep your transaction ID after payment.
+                        •{" "}
+                        {t("keepTransactionId") ||
+                          "Keep your transaction ID after payment."}
                       </p>
 
                     </div>
-
                   </div>
-
 
                   {/* Payment completed checkbox */}
                   <label className="mt-5 flex items-start gap-3 cursor-pointer">
@@ -783,21 +738,22 @@ const Cart = () => {
                     />
 
                     <span className="text-sm text-[#252525]">
-                      I have sent{" "}
+                      {t("paymentSentConfirmation") ||
+                        "I have sent"}{" "}
                       <strong>
                         ৳{grandTotal}
                       </strong>{" "}
-                      to the above bKash number.
+                      {t("toBkashNumberAbove") ||
+                        "to the above bKash number."}
                     </span>
 
                   </label>
-
 
                   {/* Transaction ID */}
                   <div className="mt-5">
 
                     <label className="block text-sm font-semibold text-[#252525] mb-2">
-                      bKash Transaction ID *
+                      {t("transactionId")} *
                     </label>
 
                     <input
@@ -808,17 +764,20 @@ const Cart = () => {
                           e.target.value
                         )
                       }
-                      placeholder="Enter your bKash TrxID"
+                      placeholder={
+                        t("transactionPlaceholder") ||
+                        "Enter your bKash TrxID"
+                      }
                       className="w-full h-12 px-4 rounded-xl border border-[#D8D5CC] outline-none focus:border-pink-500 uppercase"
                       required
                     />
 
                     <p className="mt-2 text-xs text-[#8A806B]">
-                      Example: 8KJ7A6B2CD
+                      {t("transactionExample") ||
+                        "Example: 8KJ7A6B2CD"}
                     </p>
 
                   </div>
-
 
                   {/* Verification notice */}
                   <div className="mt-5 flex gap-3 bg-[#F7F5EF] rounded-xl p-4">
@@ -829,21 +788,15 @@ const Cart = () => {
                     />
 
                     <p className="text-xs sm:text-sm text-[#77705F] leading-relaxed">
-                      Your payment will be manually verified
-                      by Cha Buzz admin. Your order will only
-                      be confirmed after the Transaction ID
-                      and payment amount match our bKash
-                      transaction record.
+                      {t("paymentVerificationNotice") ||
+                        "Your payment will be manually verified by Cha Buzz admin. Your order will only be confirmed after the Transaction ID and payment amount match our bKash transaction record."}
                     </p>
 
                   </div>
 
                 </div>
-
               </div>
-
             </div>
-
 
             {/* =====================================================
                 RIGHT SIDE — SUMMARY
@@ -853,16 +806,15 @@ const Cart = () => {
               <div className="bg-white rounded-2xl border border-[#E4E0D7] shadow-sm p-5 sm:p-6 lg:sticky lg:top-6">
 
                 <h2 className="text-xl font-bold text-[#252525]">
-                  Order Summary
+                  {t("orderSummary")}
                 </h2>
-
 
                 <div className="mt-5 space-y-3">
 
                   <div className="flex justify-between text-sm">
 
                     <span className="text-[#8A806B]">
-                      Subtotal
+                      {t("subtotal")}
                     </span>
 
                     <span className="font-semibold text-[#252525]">
@@ -871,11 +823,10 @@ const Cart = () => {
 
                   </div>
 
-
                   <div className="flex justify-between text-sm">
 
                     <span className="text-[#8A806B]">
-                      Delivery Fee
+                      {t("deliveryFee")}
                     </span>
 
                     <span className="font-semibold text-[#252525]">
@@ -884,11 +835,10 @@ const Cart = () => {
 
                   </div>
 
-
                   <div className="border-t border-[#E4E0D7] pt-4 flex justify-between">
 
                     <span className="font-bold text-[#252525]">
-                      Total
+                      {t("total")}
                     </span>
 
                     <span className="text-2xl font-extrabold text-[#252525]">
@@ -896,9 +846,7 @@ const Cart = () => {
                     </span>
 
                   </div>
-
                 </div>
-
 
                 {/* Payment method */}
                 <div className="mt-6 p-4 rounded-xl bg-pink-50 border border-pink-100">
@@ -912,19 +860,17 @@ const Cart = () => {
                     <div>
 
                       <p className="font-bold text-[#252525]">
-                        bKash
+                        {t("bkashPayment")}
                       </p>
 
                       <p className="text-xs text-[#8A806B]">
-                        Advance payment
+                        {t("advancePayment") ||
+                          "Advance payment"}
                       </p>
 
                     </div>
-
                   </div>
-
                 </div>
-
 
                 {/* Place Order */}
                 <button
@@ -936,37 +882,30 @@ const Cart = () => {
                   }
                   className="mt-6 w-full h-12 rounded-xl bg-[#252525] text-white font-bold flex items-center justify-center gap-2 hover:bg-[#A08E65] disabled:opacity-50 disabled:cursor-not-allowed transition"
                 >
-
                   {loading ? (
                     <>
                       <span className="loading loading-spinner loading-sm"></span>
-                      Submitting...
+                      {t("submitting") ||
+                        "Submitting..."}
                     </>
                   ) : (
                     <>
                       <FaCheckCircle size={15} />
-                      Submit Order
+                      {t("submitOrder")}
                     </>
                   )}
-
                 </button>
 
-
                 <p className="mt-4 text-center text-xs text-[#8A806B] leading-relaxed">
-                  We'll contact you once the payment is
-                  verified and your order is confirmed.
+                  {t("paymentContactNotice") ||
+                    "We'll contact you once the payment is verified and your order is confirmed."}
                 </p>
 
               </div>
-
             </div>
-
           </div>
-
         </form>
-
       </div>
-
     </div>
   );
 };

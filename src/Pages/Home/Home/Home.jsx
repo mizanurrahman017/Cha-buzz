@@ -1,75 +1,98 @@
 import React, { useMemo, useState } from "react";
+import { useSearchParams } from "react-router";
+
 import foods from "../../../Data/foods";
 import CategorySidebar from "../../../Components/Home/CategorySidebar";
 import FoodGrid from "../../../Components/Home/FoodGrid";
 import { useLanguage } from "../../../Context/LanguageContext";
 
 const Home = () => {
-  const [activeCategory, setActiveCategory] = useState("All Products");
-  const [search, setSearch] = useState("");
-  const [sortBy, setSortBy] = useState("default");
+  const [searchParams] = useSearchParams();
 
-  // =========================
-  // GLOBAL LANGUAGE
-  // =========================
+  // Navbar search থেকে search value আসবে
+  const navbarSearch = searchParams.get("search") || "";
+
+  const [activeCategory, setActiveCategory] =
+    useState("All Products");
+
+  const [sortBy, setSortBy] = useState("default");
 
   const { t } = useLanguage();
 
+  // =====================================================
+  // Filter Foods
+  // =====================================================
   const filteredFoods = useMemo(() => {
     let result = [...foods];
 
-    // =========================
-    // CATEGORY FILTER
-    // =========================
-
+    // Category filter
     if (activeCategory !== "All Products") {
       result = result.filter(
         (food) => food.category === activeCategory
       );
     }
 
-    // =========================
-    // SEARCH FILTER
-    // =========================
+    // Navbar Search filter
+    if (navbarSearch.trim() !== "") {
+      const searchValue = navbarSearch
+        .toLowerCase()
+        .trim();
 
-    if (search.trim() !== "") {
-      result = result.filter((food) =>
-        food.name.toLowerCase().includes(search.toLowerCase())
+      result = result.filter((food) => {
+        const foodName =
+          food.name?.toLowerCase() || "";
+
+        const foodCategory =
+          food.category?.toLowerCase() || "";
+
+        return (
+          foodName.includes(searchValue) ||
+          foodCategory.includes(searchValue)
+        );
+      });
+    }
+
+    // Price low → high
+    if (sortBy === "price-low") {
+      result.sort(
+        (a, b) => Number(a.price) - Number(b.price)
       );
     }
 
-    // =========================
-    // SORTING
-    // =========================
-
-    if (sortBy === "price-low") {
-      result.sort((a, b) => a.price - b.price);
-    }
-
+    // Price high → low
     if (sortBy === "price-high") {
-      result.sort((a, b) => b.price - a.price);
+      result.sort(
+        (a, b) => Number(b.price) - Number(a.price)
+      );
     }
 
+    // Rating
     if (sortBy === "rating") {
-      result.sort((a, b) => b.rating - a.rating);
+      result.sort(
+        (a, b) => Number(b.rating) - Number(a.rating)
+      );
     }
 
     return result;
-  }, [activeCategory, search, sortBy]);
+  }, [
+    activeCategory,
+    navbarSearch,
+    sortBy,
+  ]);
 
   return (
     <main className="min-h-screen bg-[#F3F2F0]">
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
 
-        {/* ================= TOP SEARCH AREA ================= */}
-
+        {/* =====================================================
+            Header
+        ===================================================== */}
         <div className="bg-white border border-[#E2DED5] rounded-xl p-4 mb-5">
 
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
 
-            {/* ================= PAGE TITLE ================= */}
-
+            {/* Title */}
             <div className="w-full md:w-auto">
 
               <h1 className="text-xl sm:text-2xl font-bold text-[#252525]">
@@ -82,26 +105,7 @@ const Home = () => {
 
             </div>
 
-            {/* ================= SEARCH ================= */}
-
-            <div className="w-full md:w-80">
-
-              <div className="relative">
-
-                <input
-                  type="text"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder={t("searchFood")}
-                  className="w-full h-11 px-4 rounded-lg border border-[#D8D5CC] bg-[#FAFAF8] text-sm text-[#252525] outline-none focus:border-[#A08E65] focus:ring-2 focus:ring-[#A08E65]/20 transition"
-                />
-
-              </div>
-
-            </div>
-
-            {/* ================= SORT ================= */}
-
+            {/* Sort */}
             <div className="w-full md:w-auto flex items-center gap-2">
 
               <label className="text-sm text-[#777267] whitespace-nowrap">
@@ -110,10 +114,11 @@ const Home = () => {
 
               <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
+                onChange={(e) =>
+                  setSortBy(e.target.value)
+                }
                 className="h-11 px-4 rounded-lg border border-[#D8D5CC] bg-white text-sm text-[#252525] outline-none focus:border-[#A08E65] cursor-pointer"
               >
-
                 <option value="default">
                   {t("default")}
                 </option>
@@ -129,7 +134,6 @@ const Home = () => {
                 <option value="rating">
                   {t("highestRated")}
                 </option>
-
               </select>
 
             </div>
@@ -137,22 +141,19 @@ const Home = () => {
           </div>
         </div>
 
-        {/* ================= MAIN CONTENT ================= */}
-
+        {/* =====================================================
+            Main Content
+        ===================================================== */}
         <div className="flex flex-col lg:flex-row gap-5">
 
-          {/* ================= CATEGORY ================= */}
-
+          {/* Category */}
           <CategorySidebar
             activeCategory={activeCategory}
             setActiveCategory={setActiveCategory}
           />
 
-          {/* ================= PRODUCTS ================= */}
-
+          {/* Foods */}
           <section className="flex-1 min-w-0">
-
-            {/* ================= RESULT INFO ================= */}
 
             <div className="flex items-center justify-between mb-4">
 
@@ -167,14 +168,36 @@ const Home = () => {
                 </h2>
 
                 <p className="text-xs text-[#777267] mt-1">
-                  {filteredFoods.length} {t("itemsAvailable")}
+                  {filteredFoods.length}{" "}
+                  {t("itemsAvailable")}
                 </p>
 
               </div>
 
             </div>
 
-            <FoodGrid foods={filteredFoods} />
+            {/* Food Grid */}
+            {filteredFoods.length > 0 ? (
+              <FoodGrid foods={filteredFoods} />
+            ) : (
+              <div className="bg-white rounded-xl border border-[#E2DED5] p-10 text-center">
+
+                <div className="text-5xl mb-4">
+                  🔍
+                </div>
+
+                <h3 className="text-xl font-bold text-[#252525]">
+                  {t("noFoodFound") ||
+                    "No food found"}
+                </h3>
+
+                <p className="text-sm text-[#777267] mt-2">
+                  {t("tryAnotherSearch") ||
+                    "Try searching for another food."}
+                </p>
+
+              </div>
+            )}
 
           </section>
 

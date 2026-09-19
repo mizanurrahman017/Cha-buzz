@@ -39,13 +39,6 @@ const CategorySidebar = ({
     <aside className="w-full lg:w-60 shrink-0">
       <div className="bg-white border border-[#E2DED5] rounded-xl overflow-hidden">
 
-        {/* Heading */}
-        <div className="px-5 py-4 border-b border-[#E2DED5]">
-          <h2 className="text-sm font-semibold text-[#252525]">
-            {t("categories")}
-          </h2>
-        </div>
-
         {/* Category Title */}
         <div className="px-5 py-3 bg-[#F0EEE8]">
           <h3 className="text-sm font-bold text-[#252525]">
@@ -54,7 +47,16 @@ const CategorySidebar = ({
         </div>
 
         {/* Categories */}
-        <div>
+        <div
+          className="
+            flex
+            flex-row
+            flex-nowrap
+            overflow-x-auto
+            scrollbar-hide
+            lg:block
+          "
+        >
           {categories.map((category) => {
             const active = activeCategory === category;
 
@@ -62,11 +64,23 @@ const CategorySidebar = ({
               <button
                 key={category}
                 onClick={() => setActiveCategory(category)}
-                className={`w-full text-left px-5 py-3 text-sm border-b border-[#E8E4DC] transition-all ${
-                  active
-                    ? "bg-[#E4E1DA] text-[#252525] font-semibold"
-                    : "text-[#555147] hover:bg-[#F7F5EF] hover:text-[#A08E65]"
-                }`}
+                className={`
+                  shrink-0
+                  whitespace-nowrap
+                  lg:w-full
+                  lg:text-left
+                  px-5
+                  py-3
+                  text-sm
+                  border-b
+                  border-[#E8E4DC]
+                  transition-all
+                  ${
+                    active
+                      ? "bg-[#E4E1DA] text-[#252525] font-semibold"
+                      : "text-[#555147] hover:bg-[#F7F5EF] hover:text-[#A08E65]"
+                  }
+                `}
               >
                 {t(categoryTranslationKeys[category])}
               </button>

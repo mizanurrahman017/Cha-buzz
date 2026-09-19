@@ -159,7 +159,7 @@ const Footer = () => {
                   <FaMapMarkerAlt className="mt-1 text-[#8B4F26] text-xs sm:text-sm shrink-0" />
 
                   <p className="text-xs sm:text-sm leading-5 sm:leading-6 text-[#7A6A5C]">
-                    Amberkhana,
+                    Kuchai,
                     <br />
                     Sylhet, Bangladesh
                   </p>

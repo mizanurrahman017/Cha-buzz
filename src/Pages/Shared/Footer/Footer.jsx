@@ -8,7 +8,7 @@ import {
   FaMapMarkerAlt,
   FaClock,
 } from "react-icons/fa";
-
+// ami
 import { useLanguage } from "../../../Context/LanguageContext";
 
 const Footer = () => {

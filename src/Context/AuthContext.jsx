@@ -9,6 +9,8 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signOut,
+  setPersistence,
+  browserLocalPersistence,
 } from "firebase/auth";
 
 import {
@@ -18,12 +20,10 @@ import {
 
 import { auth, db } from "../Firebase/Firebase.config";
 
-
 // ========================================
 // CREATE AUTH CONTEXT
 // ========================================
 const AuthContext = createContext();
-
 
 // ========================================
 // CUSTOM HOOK
@@ -32,23 +32,21 @@ export const useAuth = () => {
   return useContext(AuthContext);
 };
 
-
 // ========================================
 // AUTH PROVIDER
 // ========================================
 const AuthProvider = ({ children }) => {
-
   const [user, setUser] = useState(null);
-
   const [userRole, setUserRole] = useState(null);
-
   const [loading, setLoading] = useState(true);
-
 
   // ======================================
   // LOGIN
   // ======================================
   const loginUser = async (email, password) => {
+    // Firebase login browser-এ persist করবে
+    await setPersistence(auth, browserLocalPersistence);
+
     const result = await signInWithEmailAndPassword(
       auth,
       email,
@@ -58,35 +56,37 @@ const AuthProvider = ({ children }) => {
     return result.user;
   };
 
-
   // ======================================
   // LOGOUT
   // ======================================
   const logoutUser = async () => {
-    await signOut(auth);
-  };
+    try {
+      await signOut(auth);
 
+      setUser(null);
+      setUserRole(null);
+    } catch (error) {
+      console.error("Logout error:", error);
+      throw error;
+    }
+  };
 
   // ======================================
   // CHECK USER + ROLE
   // ======================================
   useEffect(() => {
-
     const unsubscribe = onAuthStateChanged(
       auth,
       async (currentUser) => {
-
         try {
-
           setLoading(true);
 
+          // ==================================
+          // USER LOGGED IN
+          // ==================================
           if (currentUser) {
-
             setUser(currentUser);
 
-            // ------------------------------
-            // Get user role from Firestore
-            // ------------------------------
             const userRef = doc(
               db,
               "users",
@@ -96,27 +96,24 @@ const AuthProvider = ({ children }) => {
             const userSnap = await getDoc(userRef);
 
             if (userSnap.exists()) {
-
               const userData = userSnap.data();
 
-              setUserRole(userData.role || "customer");
-
+              setUserRole(
+                userData.role || "customer"
+              );
             } else {
-
-              // যদি Firestore user document না থাকে
               setUserRole("customer");
-
             }
 
           } else {
-
+            // ==================================
+            // USER LOGGED OUT
+            // ==================================
             setUser(null);
             setUserRole(null);
-
           }
 
         } catch (error) {
-
           console.error(
             "Authentication error:",
             error
@@ -126,19 +123,13 @@ const AuthProvider = ({ children }) => {
           setUserRole(null);
 
         } finally {
-
           setLoading(false);
-
         }
-
       }
     );
 
-
     return () => unsubscribe();
-
   }, []);
-
 
   // ======================================
   // CONTEXT VALUE
@@ -151,13 +142,11 @@ const AuthProvider = ({ children }) => {
     logoutUser,
   };
 
-
   return (
     <AuthContext.Provider value={authInfo}>
       {children}
     </AuthContext.Provider>
   );
 };
-
 
 export default AuthProvider;

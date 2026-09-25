@@ -1,30 +1,66 @@
-import React, { useEffect, useRef, useState } from "react";
-import { FaSearch, FaShoppingCart } from "react-icons/fa";
-import { Link, useNavigate } from "react-router";
+import React, {
+  useEffect,
+  useRef,
+  useState,
+} from "react";
+
+import {
+  FaSearch,
+  FaShoppingCart,
+  FaUserShield,
+  FaUserTie,
+  FaSignOutAlt,
+} from "react-icons/fa";
+
+import {
+  Link,
+  useNavigate,
+} from "react-router";
 
 import { useCart } from "../../../Contexts/CartContext";
-import { useLanguage } from "../../../Context/LanguageContext";
+
+import {
+  useLanguage,
+} from "../../../Context/LanguageContext";
+
+import {
+  useAuth,
+} from "../../../Context/AuthContext";
 
 import foods from "../../../Data/foods";
 
 const NavBar = () => {
   const [search, setSearch] = useState("");
-  const [showSuggestions, setShowSuggestions] = useState(false);
+  const [showSuggestions, setShowSuggestions] =
+    useState(false);
 
   const searchRef = useRef(null);
 
   const { cartCount } = useCart();
-  const { language, isBangla, toggleLanguage, t } = useLanguage();
+
+  const {
+    language,
+    isBangla,
+    toggleLanguage,
+    t,
+  } = useLanguage();
+
+  const {
+    user,
+    userRole,
+    logoutUser,
+  } = useAuth();
 
   const navigate = useNavigate();
 
   // =====================================================
-  // Live Search Suggestions
+  // LIVE FOOD SEARCH SUGGESTIONS
   // =====================================================
   const suggestions = search.trim()
     ? foods
         .filter((food) => {
-          const searchValue = search.toLowerCase().trim();
+          const searchValue =
+            search.toLowerCase().trim();
 
           const foodName =
             food.name?.toLowerCase() || "";
@@ -41,7 +77,7 @@ const NavBar = () => {
     : [];
 
   // =====================================================
-  // Search Input
+  // SEARCH INPUT
   // =====================================================
   const handleSearch = (e) => {
     const value = e.target.value;
@@ -56,7 +92,7 @@ const NavBar = () => {
   };
 
   // =====================================================
-  // Search Submit
+  // SEARCH SUBMIT
   // =====================================================
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -77,7 +113,7 @@ const NavBar = () => {
   };
 
   // =====================================================
-  // Suggestion Click
+  // SUGGESTION CLICK
   // =====================================================
   const handleSuggestionClick = (food) => {
     setSearch(food.name);
@@ -90,7 +126,25 @@ const NavBar = () => {
   };
 
   // =====================================================
-  // Close suggestion when clicking outside
+  // LOGOUT
+  // =====================================================
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+
+      navigate("/", {
+        replace: true,
+      });
+    } catch (error) {
+      console.error(
+        "Logout failed:",
+        error
+      );
+    }
+  };
+
+  // =====================================================
+  // CLOSE SUGGESTIONS WHEN CLICKING OUTSIDE
   // =====================================================
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -121,17 +175,18 @@ const NavBar = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
 
         {/* =====================================================
-            Main Navbar
+            MAIN NAVBAR
         ===================================================== */}
         <div className="min-h-20 flex items-center justify-between gap-4">
 
           {/* =====================================================
-              Logo
+              LOGO
           ===================================================== */}
           <Link
             to="/"
             className="flex items-center gap-3 shrink-0 group"
           >
+
             <div className="w-14 h-14 flex items-center justify-center rounded-full overflow-hidden">
 
               <img
@@ -153,17 +208,20 @@ const NavBar = () => {
               </p>
 
             </div>
+
           </Link>
 
           {/* =====================================================
-              Desktop Search
+              DESKTOP SEARCH
           ===================================================== */}
           <div
             ref={searchRef}
             className="hidden sm:block flex-1 max-w-lg relative"
           >
 
-            <form onSubmit={handleSearchSubmit}>
+            <form
+              onSubmit={handleSearchSubmit}
+            >
 
               <FaSearch className="absolute left-5 top-1/2 -translate-y-1/2 text-[#9A6A43] text-sm z-10" />
 
@@ -184,95 +242,123 @@ const NavBar = () => {
             </form>
 
             {/* =====================================================
-                Desktop Suggestions
+                DESKTOP SEARCH SUGGESTIONS
             ===================================================== */}
-            {showSuggestions && search.trim() && (
-              <div className="absolute top-[58px] left-0 right-0 bg-white rounded-2xl border border-[#E2D8CA] shadow-xl overflow-hidden z-[100]">
+            {showSuggestions &&
+              search.trim() && (
+                <div className="absolute top-[58px] left-0 right-0 bg-white rounded-2xl border border-[#E2D8CA] shadow-xl overflow-hidden z-[100]">
 
-                {suggestions.length > 0 ? (
-                  <div className="py-2">
+                  {suggestions.length > 0 ? (
+                    <div className="py-2">
 
-                    {suggestions.map((food) => (
-                      <button
-                        key={food.id}
-                        type="button"
-                        onClick={() =>
-                          handleSuggestionClick(food)
-                        }
-                        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-[#F7F3EC] transition-colors"
-                      >
+                      {suggestions.map((food) => (
+                        <button
+                          key={food.id}
+                          type="button"
+                          onClick={() =>
+                            handleSuggestionClick(food)
+                          }
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-[#F7F3EC] transition-colors"
+                        >
 
-                        {/* Food Image */}
-                        <div className="w-12 h-12 rounded-xl overflow-hidden bg-[#F3F2F0] shrink-0">
+                          {/* Food Image */}
+                          <div className="w-12 h-12 rounded-xl overflow-hidden bg-[#F3F2F0] shrink-0">
 
-                          <img
-                            src={food.image}
-                            alt={food.name}
-                            className="w-full h-full object-cover"
-                          />
+                            <img
+                              src={food.image}
+                              alt={food.name}
+                              className="w-full h-full object-cover"
+                            />
 
-                        </div>
+                          </div>
 
-                        {/* Food Info */}
-                        <div className="flex-1 min-w-0">
+                          {/* Food Information */}
+                          <div className="flex-1 min-w-0">
 
-                          <p className="font-semibold text-sm text-[#3E2415] truncate">
-                            {food.name}
-                          </p>
+                            <p className="font-semibold text-sm text-[#3E2415] truncate">
+                              {food.name}
+                            </p>
 
-                          <p className="text-xs text-[#9A6A43] mt-1">
-                            {food.category}
-                          </p>
+                            <p className="text-xs text-[#9A6A43] mt-1">
+                              {food.category}
+                            </p>
 
-                        </div>
+                          </div>
 
-                        {/* Price */}
-                        <div className="font-bold text-sm text-[#8B4F26] shrink-0">
-                          ৳{food.price}
-                        </div>
+                          {/* Price */}
+                          <span className="font-bold text-sm text-[#8B4F26] shrink-0">
+                            ৳{food.price}
+                          </span>
 
-                      </button>
-                    ))}
+                        </button>
+                      ))}
 
-                  </div>
-                ) : (
-                  <div className="px-5 py-6 text-center">
-
-                    <div className="text-3xl mb-2">
-                      🔍
                     </div>
+                  ) : (
+                    <div className="px-5 py-6 text-center">
 
-                    <p className="text-sm font-medium text-[#5A2E16]">
-                      No food found
-                    </p>
+                      <div className="text-3xl mb-2">
+                        🔍
+                      </div>
 
-                    <p className="text-xs text-[#9A6A43] mt-1">
-                      Try another food name
-                    </p>
+                      <p className="text-sm font-semibold text-[#5A2E16]">
+                        No food found
+                      </p>
 
-                  </div>
-                )}
+                      <p className="text-xs text-[#9A6A43] mt-1">
+                        Try another food name
+                      </p>
 
-              </div>
-            )}
+                    </div>
+                  )}
+
+                </div>
+              )}
 
           </div>
 
           {/* =====================================================
-              Right Side
+              RIGHT SIDE
           ===================================================== */}
           <div className="flex items-center gap-2 sm:gap-3">
 
-            {/* Mobile Search Icon */}
+            {/* =====================================================
+                DESKTOP ADMIN PANEL
+            ===================================================== */}
+            {user && userRole === "admin" && (
+              <Link
+                to="/admin/orders"
+                className="hidden lg:flex items-center gap-2 h-10 px-4 rounded-full bg-[#5A2E16] text-white text-sm font-semibold hover:bg-[#6B3D1F] transition-all"
+              >
+                <FaUserShield />
+                Admin Panel
+              </Link>
+            )}
+
+            {/* =====================================================
+                DESKTOP WAITER PANEL
+            ===================================================== */}
+            {user && userRole === "waiter" && (
+              <Link
+                to="/waiter"
+                className="hidden lg:flex items-center gap-2 h-10 px-4 rounded-full bg-[#5A2E16] text-white text-sm font-semibold hover:bg-[#6B3D1F] transition-all"
+              >
+                <FaUserTie />
+                Waiter Panel
+              </Link>
+            )}
+
+            {/* =====================================================
+                MOBILE SEARCH BUTTON
+            ===================================================== */}
             <button
               type="button"
               onClick={() => {
-                const input =
-                  document.getElementById(
+                document
+                  .getElementById(
                     "mobile-food-search"
-                  );
-
-                input?.focus();
+                  )
+                  ?.focus();
               }}
               className="sm:hidden w-10 h-10 rounded-full border border-[#DCCDBB] bg-white/70 flex items-center justify-center text-[#6B3D1F] hover:bg-[#6B3D1F] hover:text-white transition-all"
               title={t("searchFood")}
@@ -280,10 +366,18 @@ const NavBar = () => {
               <FaSearch className="text-sm" />
             </button>
 
-            {/* Language */}
+            {/* =====================================================
+                LANGUAGE
+            ===================================================== */}
             <button
+              type="button"
               onClick={toggleLanguage}
               className="h-10 px-3 sm:px-4 rounded-full border border-[#DCCDBB] bg-white/70 text-xs sm:text-sm font-semibold text-[#5A2E16] hover:border-[#A96F3D] hover:bg-white transition-all flex items-center gap-2"
+              title={
+                isBangla
+                  ? "Switch to English"
+                  : "বাংলায় পরিবর্তন করুন"
+              }
             >
 
               <span
@@ -312,7 +406,9 @@ const NavBar = () => {
 
             </button>
 
-            {/* Cart */}
+            {/* =====================================================
+                CART
+            ===================================================== */}
             <Link
               to="/cart"
               className="relative w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-[#8B4F26] text-[#FFF9F2] flex items-center justify-center shadow-md hover:bg-[#6B3D1F] hover:scale-105 transition-all duration-300"
@@ -329,18 +425,35 @@ const NavBar = () => {
 
             </Link>
 
+            {/* =====================================================
+                LOGOUT
+            ===================================================== */}
+            {user && (
+              <button
+                type="button"
+                onClick={handleLogout}
+                title="Logout"
+                className="w-10 h-10 rounded-full border border-[#DCCDBB] bg-white/70 text-[#8B4F26] hover:bg-[#8B4F26] hover:text-white flex items-center justify-center transition-all"
+              >
+                <FaSignOutAlt className="text-sm" />
+              </button>
+            )}
+
           </div>
+
         </div>
 
         {/* =====================================================
-            Mobile Search
+            MOBILE SEARCH
         ===================================================== */}
         <div
           ref={searchRef}
           className="sm:hidden pb-4 relative"
         >
 
-          <form onSubmit={handleSearchSubmit}>
+          <form
+            onSubmit={handleSearchSubmit}
+          >
 
             <div className="relative">
 
@@ -365,67 +478,119 @@ const NavBar = () => {
 
           </form>
 
-          {/* Mobile Suggestions */}
-          {showSuggestions && search.trim() && (
-            <div className="absolute top-[52px] left-0 right-0 bg-white rounded-2xl border border-[#E2D8CA] shadow-xl overflow-hidden z-[100]">
+          {/* =====================================================
+              MOBILE SEARCH SUGGESTIONS
+          ===================================================== */}
+          {showSuggestions &&
+            search.trim() && (
+              <div className="absolute top-[52px] left-0 right-0 bg-white rounded-2xl border border-[#E2D8CA] shadow-xl overflow-hidden z-[100]">
 
-              {suggestions.length > 0 ? (
-                <div className="py-2">
+                {suggestions.length > 0 ? (
+                  <div className="py-2">
 
-                  {suggestions.map((food) => (
-                    <button
-                      key={food.id}
-                      type="button"
-                      onClick={() =>
-                        handleSuggestionClick(food)
-                      }
-                      className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-[#F7F3EC] transition-colors"
-                    >
+                    {suggestions.map((food) => (
+                      <button
+                        key={food.id}
+                        type="button"
+                        onClick={() =>
+                          handleSuggestionClick(
+                            food
+                          )
+                        }
+                        className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-[#F7F3EC] transition-colors"
+                      >
 
-                      <div className="w-11 h-11 rounded-xl overflow-hidden bg-[#F3F2F0] shrink-0">
+                        <div className="w-11 h-11 rounded-xl overflow-hidden bg-[#F3F2F0] shrink-0">
 
-                        <img
-                          src={food.image}
-                          alt={food.name}
-                          className="w-full h-full object-cover"
-                        />
+                          <img
+                            src={food.image}
+                            alt={food.name}
+                            className="w-full h-full object-cover"
+                          />
 
-                      </div>
+                        </div>
 
-                      <div className="flex-1 min-w-0">
+                        <div className="flex-1 min-w-0">
 
-                        <p className="font-semibold text-sm text-[#3E2415] truncate">
-                          {food.name}
-                        </p>
+                          <p className="text-sm font-semibold text-[#3E2415] truncate">
+                            {food.name}
+                          </p>
 
-                        <p className="text-xs text-[#9A6A43]">
-                          {food.category}
-                        </p>
+                          <p className="text-xs text-[#9A6A43] mt-1">
+                            {food.category}
+                          </p>
 
-                      </div>
+                        </div>
 
-                      <span className="font-bold text-sm text-[#8B4F26]">
-                        ৳{food.price}
-                      </span>
+                        <span className="text-sm font-bold text-[#8B4F26] shrink-0">
+                          ৳{food.price}
+                        </span>
 
-                    </button>
-                  ))}
+                      </button>
+                    ))}
 
-                </div>
-              ) : (
-                <div className="px-5 py-5 text-center">
+                  </div>
+                ) : (
+                  <div className="px-5 py-5 text-center">
 
-                  <p className="text-sm font-medium text-[#5A2E16]">
-                    No food found
-                  </p>
+                    <div className="text-2xl mb-2">
+                      🔍
+                    </div>
 
-                </div>
+                    <p className="text-sm font-semibold text-[#5A2E16]">
+                      No food found
+                    </p>
+
+                    <p className="text-xs text-[#9A6A43] mt-1">
+                      Try another food name
+                    </p>
+
+                  </div>
+                )}
+
+              </div>
+            )}
+
+        </div>
+
+        {/* =====================================================
+            MOBILE ADMIN / WAITER PANEL
+        ===================================================== */}
+        {user &&
+          (userRole === "admin" ||
+            userRole === "waiter") && (
+            <div className="sm:hidden pb-4">
+
+              {/* ADMIN */}
+              {userRole === "admin" && (
+                <Link
+                  to="/admin/orders"
+                  className="w-full h-11 rounded-xl bg-[#5A2E16] text-white flex items-center justify-center gap-2 text-sm font-semibold shadow-sm hover:bg-[#6B3D1F] transition-all"
+                >
+                  <FaUserShield />
+
+                  <span>
+                    Admin Panel
+                  </span>
+                </Link>
+              )}
+
+              {/* WAITER */}
+              {userRole === "waiter" && (
+                <Link
+                  to="/waiter"
+                  className="w-full h-11 rounded-xl bg-[#5A2E16] text-white flex items-center justify-center gap-2 text-sm font-semibold shadow-sm hover:bg-[#6B3D1F] transition-all"
+                >
+                  <FaUserTie />
+
+                  <span>
+                    Waiter Panel
+                  </span>
+                </Link>
               )}
 
             </div>
           )}
-
-        </div>
 
       </div>
     </nav>

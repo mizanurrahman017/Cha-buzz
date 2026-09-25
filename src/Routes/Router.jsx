@@ -17,33 +17,49 @@ import PaymentSuccess from "../Pages/PaymentSuccess/PaymentSuccess";
 export const router = createBrowserRouter([
   {
     path: "/",
+
     Component: RootLayouts,
 
     children: [
+
+      // ==================================
+      // HOME
+      // ==================================
       {
         index: true,
         Component: Home,
       },
 
+      // ==================================
+      // CART
+      // ==================================
       {
         path: "cart",
         Component: Cart,
       },
 
+      // ==================================
+      // LOGIN
+      // ==================================
       {
         path: "login",
         Component: Login,
       },
+
+      // ==================================
+      // PAYMENT SUCCESS
+      // ==================================
       {
         path: "payment-success",
         Component: PaymentSuccess,
       },
 
-      // =========================
-      // WAITER ROUTE
-      // =========================
+      // ==================================
+      // WAITER PANEL
+      // ==================================
       {
         path: "waiter",
+
         element: (
           <WaiterRoute>
             <Waiter />
@@ -51,11 +67,12 @@ export const router = createBrowserRouter([
         ),
       },
 
-      // =========================
-      // ADMIN ROUTE
-      // =========================
+      // ==================================
+      // ADMIN ORDERS
+      // ==================================
       {
         path: "admin/orders",
+
         element: (
           <AdminRoute>
             <Orders />

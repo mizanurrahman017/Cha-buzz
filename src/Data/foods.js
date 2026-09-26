@@ -57,7 +57,7 @@ const foods = [
     id: 7,
     name: "Rabri jilapi",
     category: "Cold Drinks",
-    price: 60,
+    price: 70,
     rating: 4.7,
     image:
       "/Rabri jilapi.jpeg",

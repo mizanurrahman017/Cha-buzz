@@ -1,9 +1,11 @@
 import React from "react";
 import {
+  FaStar,
   FaShoppingCart,
   FaBolt,
 } from "react-icons/fa";
 import { useNavigate } from "react-router";
+
 import { useCart } from "../../Contexts/CartContext";
 import { useLanguage } from "../../Context/LanguageContext";
 
@@ -11,218 +13,123 @@ const FoodCard = ({ food }) => {
   const navigate = useNavigate();
 
   const { addToCart } = useCart();
-
-  // =========================
-  // GLOBAL LANGUAGE
-  // =========================
   const { t } = useLanguage();
 
-  // =========================
-  // Add To Cart
-  // =========================
+  // =====================================================
+  // ADD TO CART
+  // =====================================================
   const handleAddToCart = () => {
     addToCart(food);
-    navigate("/cart");
   };
 
-  // =========================
-  // Buy Now
-  // =========================
+  // =====================================================
+  // BUY NOW
+  // =====================================================
   const handleBuyNow = () => {
     addToCart(food);
     navigate("/cart");
   };
 
   return (
-    <div
-      className="
-        group
-        bg-white
-        rounded-2xl
-        overflow-hidden
-        border
-        border-[#E4E0D7]
-        shadow-[0_3px_15px_rgba(37,37,37,0.06)]
-        hover:shadow-[0_8px_25px_rgba(37,37,37,0.12)]
-        hover:-translate-y-1
-        transition-all
-        duration-300
-        h-full
-      "
-    >
-      {/* ========================= */}
-      {/* IMAGE */}
-      {/* ========================= */}
+    <div className="bg-white rounded-2xl border border-[#E2DED5] overflow-hidden shadow-[0_4px_15px_rgba(60,45,30,0.08)] hover:shadow-[0_8px_25px_rgba(60,45,30,0.14)] transition-all duration-300 group">
 
-      <div className="relative h-40 sm:h-48 lg:h-52 overflow-hidden">
+      {/* =====================================================
+          FOOD IMAGE
+      ===================================================== */}
+      <div
+        onClick={handleAddToCart}
+        className="relative h-52 sm:h-56 overflow-hidden cursor-pointer"
+        title="Click to add to cart"
+      >
 
         <img
           src={food.image}
           alt={food.name}
-          className="
-            w-full
-            h-full
-            object-cover
-            group-hover:scale-105
-            transition-transform
-            duration-500
-          "
+          className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
 
-        {/* Image Overlay */}
+        {/* CATEGORY BADGE */}
+        <span className="absolute top-3 left-3 bg-white/95 backdrop-blur-sm text-[#3E2415] text-xs font-semibold px-3 py-1.5 rounded-full shadow-sm">
+          {food.category}
+        </span>
 
-        <div
-          className="
-            absolute
-            inset-0
-            bg-gradient-to-t
-            from-black/25
-            via-transparent
-            to-transparent
-            pointer-events-none
-          "
-        />
+        {/* IMAGE HOVER OVERLAY */}
+        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center">
 
-        {/* Category Badge */}
+          <div className="opacity-0 group-hover:opacity-100 transition-all duration-300 bg-white/95 text-[#5A2E16] px-4 py-2 rounded-full text-xs sm:text-sm font-semibold shadow-lg">
+            <FaShoppingCart className="inline mr-2" />
+            {t("addToCart")}
+          </div>
 
-        <div className="absolute top-2.5 left-2.5 sm:top-3 sm:left-3">
-          <span
-            className="
-              inline-flex
-              items-center
-              px-2
-              py-1
-              rounded-full
-              bg-white/95
-              backdrop-blur-sm
-              text-[9px]
-              sm:text-[10px]
-              font-bold
-              tracking-wide
-              text-[#252525]
-              shadow-sm
-            "
-          >
-            {food.category}
-          </span>
         </div>
+
       </div>
 
-      {/* ========================= */}
-      {/* CONTENT */}
-      {/* ========================= */}
+      {/* =====================================================
+          FOOD INFORMATION
+      ===================================================== */}
+      <div className="p-4">
 
-      <div className="p-3 sm:p-4">
-
-        {/* Food Name */}
-
-        <h3
-          className="
-            text-[14px]
-            sm:text-[17px]
-            font-bold
-            leading-snug
-            text-[#252525]
-            min-h-[40px]
-            sm:min-h-[48px]
-            line-clamp-2
-          "
-        >
+        {/* FOOD NAME */}
+        <h3 className="text-base sm:text-lg font-bold text-[#252525] truncate">
           {food.name}
         </h3>
 
-        {/* ========================= */}
+        {/* RATING */}
+        {food.rating && (
+          <div className="flex items-center gap-1 mt-2">
+
+            <FaStar className="text-[#D4A94A] text-xs" />
+
+            <span className="text-xs font-medium text-[#777267]">
+              {food.rating}
+            </span>
+
+          </div>
+        )}
+
         {/* PRICE */}
-        {/* ========================= */}
+        <div className="mt-4">
 
-        <div className="mt-2 sm:mt-3 mb-4">
-
-          <p className="text-[11px] sm:text-xs text-[#8A806B] mb-1">
+          <p className="text-xs text-[#9A6A43]">
             {t("price")}
           </p>
 
-          <p
-            className="
-              text-2xl
-              font-bold
-              leading-none
-              text-[#252525]
-            "
-          >
+          <p className="text-2xl font-extrabold text-[#252525]">
             Tk{food.price}
           </p>
 
         </div>
 
-        {/* ========================= */}
-        {/* BUTTONS */}
-        {/* ========================= */}
+        {/* =====================================================
+            ADD TO CART BUTTON
+        ===================================================== */}
+        <button
+          type="button"
+          onClick={handleAddToCart}
+          className="w-full h-11 mt-4 rounded-lg border border-[#252525] bg-white text-[#252525] flex items-center justify-center gap-2 text-sm font-semibold hover:bg-[#252525] hover:text-white transition-all duration-300"
+        >
 
-        <div className="space-y-2.5">
+          <FaShoppingCart />
 
-          {/* ADD TO CART */}
+          {t("addToCart")}
 
-          <button
-            onClick={handleAddToCart}
-            className="
-              w-full
-              h-10
-              sm:h-11
-              rounded-lg
-              border
-              border-[#252525]
-              bg-white
-              text-[#252525]
-              font-semibold
-              text-xs
-              sm:text-sm
-              flex
-              items-center
-              justify-center
-              gap-2
-              hover:bg-[#252525]
-              hover:text-white
-              active:scale-[0.98]
-              transition-all
-              duration-200
-            "
-          >
-            <FaShoppingCart size={13} />
+        </button>
 
-            {t("addToCart")}
-          </button>
+        {/* =====================================================
+            BUY NOW BUTTON
+        ===================================================== */}
+        <button
+          type="button"
+          onClick={handleBuyNow}
+          className="w-full h-11 mt-2.5 rounded-lg bg-[#252525] text-white flex items-center justify-center gap-2 text-sm font-semibold hover:bg-[#3A3A3A] transition-all duration-300"
+        >
 
-          {/* BUY NOW */}
+          <FaBolt />
 
-          <button
-            onClick={handleBuyNow}
-            className="
-              w-full
-              h-10
-              sm:h-11
-              rounded-lg
-              bg-[#252525]
-              text-white
-              font-semibold
-              text-xs
-              sm:text-sm
-              flex
-              items-center
-              justify-center
-              gap-2
-              hover:bg-[#A08E65]
-              active:scale-[0.98]
-              transition-all
-              duration-200
-              shadow-sm
-            "
-          >
-            <FaBolt size={12} />
+          {t("buyNow")}
 
-            {t("buyNow")}
-          </button>
-
-        </div>
+        </button>
 
       </div>
     </div>

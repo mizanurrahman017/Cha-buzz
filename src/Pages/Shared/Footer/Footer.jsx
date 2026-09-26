@@ -8,7 +8,7 @@ import {
   FaMapMarkerAlt,
   FaClock,
 } from "react-icons/fa";
-// ami
+
 import { useLanguage } from "../../../Context/LanguageContext";
 
 const Footer = () => {
@@ -173,7 +173,7 @@ const Footer = () => {
                   <FaPhoneAlt className="text-[#8B4F26] text-xs sm:text-sm shrink-0" />
 
                   <p className="text-xs sm:text-sm text-[#7A6A5C]">
-                    +880 1XXXXXXXXX
+                    +8801725514927
                   </p>
 
                 </div>
@@ -185,7 +185,7 @@ const Footer = () => {
                   <FaEnvelope className="mt-1 text-[#8B4F26] text-xs sm:text-sm shrink-0" />
 
                   <p className="text-xs sm:text-sm text-[#7A6A5C] break-all">
-                    hello@chabuzz.com
+                    subedahmed066@gmail.com
                   </p>
 
                 </div>

@@ -33,10 +33,9 @@ import { useAuth } from "../../../Context/AuthContext";
 
 
 // =====================================================
-// Status configuration
+// STATUS CONFIG
 // =====================================================
 const statusConfig = {
-
   pending: {
     label: "Pending",
     icon: <FaClock />,
@@ -96,23 +95,21 @@ const statusConfig = {
 
 
 // =====================================================
-// Format Date
+// FORMAT DATE
 // =====================================================
 const formatDate = (timestamp) => {
-
   if (!timestamp) {
     return "Just now";
   }
 
   try {
-
     return timestamp
       .toDate()
       .toLocaleString("en-BD", {
+        timeZone: "Asia/Dhaka",
         dateStyle: "medium",
         timeStyle: "short",
       });
-
   } catch (error) {
     return "Unknown date";
   }
@@ -120,26 +117,39 @@ const formatDate = (timestamp) => {
 
 
 // =====================================================
-// Check Today
+// CHECK TODAY - BANGLADESH TIME
 // =====================================================
 const isToday = (timestamp) => {
-
   if (!timestamp) {
     return false;
   }
 
   try {
-
     const date = timestamp.toDate();
 
     const today = new Date();
 
-    return (
-      date.getDate() === today.getDate() &&
-      date.getMonth() === today.getMonth() &&
-      date.getFullYear() === today.getFullYear()
-    );
+    const dateInBD = new Intl.DateTimeFormat(
+      "en-CA",
+      {
+        timeZone: "Asia/Dhaka",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }
+    ).format(date);
 
+    const todayInBD = new Intl.DateTimeFormat(
+      "en-CA",
+      {
+        timeZone: "Asia/Dhaka",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }
+    ).format(today);
+
+    return dateInBD === todayInBD;
   } catch (error) {
     return false;
   }
@@ -147,7 +157,7 @@ const isToday = (timestamp) => {
 
 
 // =====================================================
-// Order Card
+// ORDER CARD
 // =====================================================
 const OrderCard = ({
   order,
@@ -185,7 +195,6 @@ const OrderCard = ({
 
 
   return (
-
     <div className="bg-white rounded-2xl border border-[#E4E0D7] shadow-sm overflow-hidden">
 
 
@@ -205,7 +214,6 @@ const OrderCard = ({
               </span>
 
 
-              {/* Source */}
               {isWaiterOrder ? (
 
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#F7F5EF] border border-[#D8D5CC] text-xs font-semibold text-[#77705F]">
@@ -238,7 +246,6 @@ const OrderCard = ({
           </div>
 
 
-          {/* Order status */}
           <span
             className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold ${status.className}`}
           >
@@ -256,16 +263,17 @@ const OrderCard = ({
       ===================================================== */}
       <div className="p-5 border-b border-[#E4E0D7]">
 
-
         {isWaiterOrder ? (
 
           <div className="flex items-center gap-3">
 
             <div className="w-11 h-11 rounded-xl bg-[#F7F5EF] flex items-center justify-center">
+
               <FaUserTie
                 className="text-[#A08E65]"
                 size={18}
               />
+
             </div>
 
             <div>
@@ -294,6 +302,7 @@ const OrderCard = ({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 
               <div>
+
                 <p className="text-xs text-[#8A806B]">
                   Name
                 </p>
@@ -301,10 +310,12 @@ const OrderCard = ({
                 <p className="text-sm font-semibold text-[#252525]">
                   {order.customer?.name || "N/A"}
                 </p>
+
               </div>
 
 
               <div>
+
                 <p className="text-xs text-[#8A806B]">
                   Phone
                 </p>
@@ -312,12 +323,14 @@ const OrderCard = ({
                 <p className="text-sm font-semibold text-[#252525]">
                   {order.customer?.phone || "N/A"}
                 </p>
+
               </div>
 
 
               {order.customer?.email && (
 
                 <div>
+
                   <p className="text-xs text-[#8A806B]">
                     Email
                   </p>
@@ -325,6 +338,7 @@ const OrderCard = ({
                   <p className="text-sm font-semibold text-[#252525] break-all">
                     {order.customer.email}
                   </p>
+
                 </div>
 
               )}
@@ -352,7 +366,7 @@ const OrderCard = ({
 
 
       {/* =====================================================
-          ONLINE BKASH PAYMENT VERIFICATION
+          ONLINE PAYMENT
       ===================================================== */}
       {isOnlineOrder && (
 
@@ -375,7 +389,6 @@ const OrderCard = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
 
-            {/* Payment Status */}
             <div className="bg-[#F7F5EF] rounded-xl p-4">
 
               <p className="text-xs text-[#8A806B]">
@@ -389,7 +402,6 @@ const OrderCard = ({
             </div>
 
 
-            {/* Payment Amount */}
             <div className="bg-[#F7F5EF] rounded-xl p-4">
 
               <p className="text-xs text-[#8A806B]">
@@ -397,13 +409,16 @@ const OrderCard = ({
               </p>
 
               <p className="mt-1 text-xl font-extrabold text-[#252525]">
-                ৳{Number(order.paymentAmount || order.total)}
+                ৳
+                {Number(
+                  order.paymentAmount ||
+                    order.total
+                )}
               </p>
 
             </div>
 
 
-            {/* Transaction ID */}
             <div className="sm:col-span-2 bg-pink-50 border border-pink-100 rounded-xl p-4">
 
               <p className="text-xs text-pink-600 font-semibold">
@@ -411,7 +426,8 @@ const OrderCard = ({
               </p>
 
               <p className="mt-1 text-lg font-extrabold text-[#252525] tracking-wide break-all">
-                {order.transactionId || "Not provided"}
+                {order.transactionId ||
+                  "Not provided"}
               </p>
 
             </div>
@@ -419,9 +435,6 @@ const OrderCard = ({
           </div>
 
 
-          {/* =====================================================
-              Verification Notice
-          ===================================================== */}
           {order.paymentStatus === "submitted" && (
 
             <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl p-4">
@@ -455,9 +468,6 @@ const OrderCard = ({
           )}
 
 
-          {/* =====================================================
-              Verify / Reject Buttons
-          ===================================================== */}
           {order.paymentStatus === "submitted" && (
 
             <div className="mt-4 flex flex-col sm:flex-row gap-3">
@@ -496,7 +506,6 @@ const OrderCard = ({
           )}
 
 
-          {/* Already verified */}
           {order.paymentStatus === "paid" && (
 
             <div className="mt-4 flex items-center gap-2 px-4 py-3 rounded-xl bg-green-50 border border-green-200 text-green-700">
@@ -512,7 +521,6 @@ const OrderCard = ({
           )}
 
 
-          {/* Rejected */}
           {order.paymentStatus === "failed" && (
 
             <div className="mt-4 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700">
@@ -608,7 +616,6 @@ const OrderCard = ({
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
 
 
-          {/* Payment status for waiter */}
           {isWaiterOrder && (
 
             <div>
@@ -618,7 +625,10 @@ const OrderCard = ({
               </label>
 
               <select
-                value={order.paymentStatus || "paid"}
+                value={
+                  order.paymentStatus ||
+                  "paid"
+                }
                 onChange={(e) =>
                   onUpdatePaymentStatus(
                     order.id,
@@ -651,7 +661,6 @@ const OrderCard = ({
           )}
 
 
-          {/* Order Status */}
           <div>
 
             <label className="block text-xs font-bold text-[#77705F] mb-2">
@@ -659,7 +668,10 @@ const OrderCard = ({
             </label>
 
             <select
-              value={order.orderStatus || "pending"}
+              value={
+                order.orderStatus ||
+                "pending"
+              }
               onChange={(e) =>
                 onUpdateOrderStatus(
                   order,
@@ -670,7 +682,7 @@ const OrderCard = ({
             >
 
               {isOnlineOrder &&
-                order.paymentStatus !== "paid" ? (
+              order.paymentStatus !== "paid" ? (
 
                 <>
                   <option value="pending_payment_verification">
@@ -726,7 +738,7 @@ const OrderCard = ({
 
 
       {/* =====================================================
-          Price Summary
+          PRICE SUMMARY
       ===================================================== */}
       <div className="p-5">
 
@@ -777,7 +789,6 @@ const OrderCard = ({
         </div>
 
 
-        {/* Note */}
         {order.note && (
 
           <div className="mt-4 bg-[#F7F5EF] rounded-xl p-4">
@@ -802,7 +813,7 @@ const OrderCard = ({
 
 
 // =====================================================
-// Main Orders Page
+// MAIN ORDERS PAGE
 // =====================================================
 const Orders = () => {
 
@@ -814,7 +825,7 @@ const Orders = () => {
 
 
   // =====================================================
-  // Real-time Orders
+  // REAL-TIME ALL ORDERS
   // =====================================================
   useEffect(() => {
 
@@ -829,17 +840,20 @@ const Orders = () => {
 
       (snapshot) => {
 
-        const orderList = snapshot.docs.map(
-          (docSnapshot) => ({
-            id: docSnapshot.id,
-            ...docSnapshot.data(),
-          })
-        );
+        const orderList =
+          snapshot.docs.map(
+            (docSnapshot) => ({
+              id: docSnapshot.id,
+              ...docSnapshot.data(),
+            })
+          );
+
 
         setOrders(orderList);
 
         setLoading(false);
       },
+
 
       (error) => {
 
@@ -859,14 +873,13 @@ const Orders = () => {
 
 
   // =====================================================
-  // Update Order Status
+  // UPDATE ORDER STATUS
   // =====================================================
   const updateOrderStatus = async (
     order,
     newStatus
   ) => {
 
-    // Online order cannot be confirmed before payment
     if (
       order.orderSource !== "waiter" &&
       order.paymentStatus !== "paid" &&
@@ -912,7 +925,7 @@ const Orders = () => {
 
 
   // =====================================================
-  // Update Waiter Payment Status
+  // UPDATE WAITER PAYMENT STATUS
   // =====================================================
   const updatePaymentStatus = async (
     orderId,
@@ -944,7 +957,7 @@ const Orders = () => {
 
 
   // =====================================================
-  // VERIFY bKASH PAYMENT
+  // VERIFY BKASH PAYMENT
   // =====================================================
   const verifyBkashPayment = async (order) => {
 
@@ -976,6 +989,7 @@ const Orders = () => {
 
           updatedAt:
             serverTimestamp(),
+
         }
       );
 
@@ -999,7 +1013,7 @@ const Orders = () => {
 
 
   // =====================================================
-  // REJECT bKASH PAYMENT
+  // REJECT BKASH PAYMENT
   // =====================================================
   const rejectBkashPayment = async (order) => {
 
@@ -1036,6 +1050,7 @@ const Orders = () => {
 
           updatedAt:
             serverTimestamp(),
+
         }
       );
 
@@ -1059,137 +1074,155 @@ const Orders = () => {
 
 
   // =====================================================
-  // Statistics
+  // TODAY'S ORDERS ONLY
   // =====================================================
-
-  const pendingCount = useMemo(() => {
+  const todayOrders = useMemo(() => {
 
     return orders.filter(
+      (order) =>
+        isToday(order.createdAt)
+    );
+
+  }, [orders]);
+
+
+  // =====================================================
+  // TODAY WAITER ORDERS
+  // =====================================================
+  const todayWaiterOrders = useMemo(() => {
+
+    return todayOrders.filter(
+      (order) =>
+        order.orderSource === "waiter"
+    );
+
+  }, [todayOrders]);
+
+
+  // =====================================================
+  // TODAY ONLINE ORDERS
+  // =====================================================
+  const todayOnlineOrders = useMemo(() => {
+
+    return todayOrders.filter(
+      (order) =>
+        order.orderSource !== "waiter"
+    );
+
+  }, [todayOrders]);
+
+
+  // =====================================================
+  // TODAY PENDING
+  // =====================================================
+  const pendingCount = useMemo(() => {
+
+    return todayOrders.filter(
       (order) =>
         order.orderStatus === "pending" ||
         order.orderStatus ===
           "pending_payment_verification"
     ).length;
 
-  }, [orders]);
+  }, [todayOrders]);
 
 
+  // =====================================================
+  // TODAY CONFIRMED
+  // =====================================================
   const confirmedCount = useMemo(() => {
 
-    return orders.filter(
+    return todayOrders.filter(
       (order) =>
         order.orderStatus === "confirmed"
     ).length;
 
-  }, [orders]);
+  }, [todayOrders]);
 
 
+  // =====================================================
+  // TODAY PREPARING
+  // =====================================================
   const preparingCount = useMemo(() => {
 
-    return orders.filter(
+    return todayOrders.filter(
       (order) =>
         order.orderStatus === "preparing"
     ).length;
 
-  }, [orders]);
+  }, [todayOrders]);
 
 
+  // =====================================================
+  // TODAY READY
+  // =====================================================
   const readyCount = useMemo(() => {
 
-    return orders.filter(
+    return todayOrders.filter(
       (order) =>
         order.orderStatus === "ready"
     ).length;
 
-  }, [orders]);
+  }, [todayOrders]);
 
 
+  // =====================================================
+  // TODAY PAYMENT VERIFICATION
+  // =====================================================
   const paymentVerificationCount =
     useMemo(() => {
 
-      return orders.filter(
+      return todayOrders.filter(
         (order) =>
-          order.paymentStatus === "submitted"
+          order.paymentStatus ===
+          "submitted"
       ).length;
 
-    }, [orders]);
+    }, [todayOrders]);
 
 
-  const waiterOrders = useMemo(() => {
-
-    return orders.filter(
-      (order) =>
-        order.orderSource === "waiter"
-    );
-
-  }, [orders]);
-
-
-  const onlineOrders = useMemo(() => {
-
-    return orders.filter(
-      (order) =>
-        order.orderSource !== "waiter"
-    );
-
-  }, [orders]);
-
-
-  const todayWaiterOrders =
-    useMemo(() => {
-
-      return waiterOrders.filter(
-        (order) =>
-          isToday(order.createdAt)
-      );
-
-    }, [waiterOrders]);
-
-
-  const todayOnlineOrders =
-    useMemo(() => {
-
-      return onlineOrders.filter(
-        (order) =>
-          isToday(order.createdAt)
-      );
-
-    }, [onlineOrders]);
-
-
+  // =====================================================
+  // TODAY WAITER SALES
+  // =====================================================
   const todayWaiterSales =
     useMemo(() => {
 
       return todayWaiterOrders.reduce(
         (total, order) =>
-          total + Number(order.total || 0),
+          total +
+          Number(order.total || 0),
         0
       );
 
     }, [todayWaiterOrders]);
 
 
+  // =====================================================
+  // TODAY TOTAL SALES
+  // =====================================================
   const todayTotalSales =
     useMemo(() => {
 
-      return orders
+      return todayOrders
         .filter(
           (order) =>
-            isToday(order.createdAt) &&
-            order.paymentStatus === "paid" &&
-            order.orderStatus !== "cancelled"
+            order.paymentStatus ===
+              "paid" &&
+            order.orderStatus !==
+              "cancelled"
         )
         .reduce(
           (total, order) =>
-            total + Number(order.total || 0),
+            total +
+            Number(order.total || 0),
           0
         );
 
-    }, [orders]);
+    }, [todayOrders]);
 
 
   // =====================================================
-  // Loading
+  // LOADING
   // =====================================================
   if (loading) {
 
@@ -1202,7 +1235,7 @@ const Orders = () => {
           <span className="loading loading-spinner loading-lg text-[#252525]"></span>
 
           <p className="mt-3 text-sm text-[#8A806B]">
-            Loading orders...
+            Loading today's orders...
           </p>
 
         </div>
@@ -1226,12 +1259,11 @@ const Orders = () => {
         <div className="mb-8">
 
           <h1 className="text-3xl sm:text-4xl font-extrabold text-[#252525]">
-            Order Management
+            Today's Orders
           </h1>
 
           <p className="mt-2 text-[#8A806B]">
-            Manage online bKash orders and waiter orders
-            from one place.
+            Only today's online and waiter orders are shown here.
           </p>
 
         </div>
@@ -1397,13 +1429,13 @@ const Orders = () => {
 
 
         {/* =====================================================
-            ORDERS
+            TODAY'S ORDERS
         ===================================================== */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
 
 
           {/* =====================================================
-              WAITER ORDERS
+              TODAY WAITER ORDERS
           ===================================================== */}
           <div>
 
@@ -1412,23 +1444,24 @@ const Orders = () => {
               <div>
 
                 <h2 className="text-xl font-extrabold text-[#252525]">
-                  Waiter Orders
+                  Today's Waiter Orders
                 </h2>
 
                 <p className="text-sm text-[#8A806B] mt-1">
-                  Orders recorded by waiter
+                  Orders recorded by waiter today
                 </p>
 
               </div>
 
+
               <span className="px-3 py-1 rounded-full bg-white border border-[#E4E0D7] text-sm font-bold">
-                {waiterOrders.length}
+                {todayWaiterOrders.length}
               </span>
 
             </div>
 
 
-            {waiterOrders.length === 0 ? (
+            {todayWaiterOrders.length === 0 ? (
 
               <div className="bg-white rounded-2xl border border-[#E4E0D7] p-10 text-center">
 
@@ -1438,7 +1471,7 @@ const Orders = () => {
                 />
 
                 <p className="mt-3 font-semibold text-[#252525]">
-                  No waiter orders yet.
+                  No waiter orders today.
                 </p>
 
               </div>
@@ -1447,26 +1480,28 @@ const Orders = () => {
 
               <div className="space-y-5">
 
-                {waiterOrders.map((order) => (
+                {todayWaiterOrders.map(
+                  (order) => (
 
-                  <OrderCard
-                    key={order.id}
-                    order={order}
-                    onUpdateOrderStatus={
-                      updateOrderStatus
-                    }
-                    onUpdatePaymentStatus={
-                      updatePaymentStatus
-                    }
-                    onVerifyPayment={
-                      verifyBkashPayment
-                    }
-                    onRejectPayment={
-                      rejectBkashPayment
-                    }
-                  />
+                    <OrderCard
+                      key={order.id}
+                      order={order}
+                      onUpdateOrderStatus={
+                        updateOrderStatus
+                      }
+                      onUpdatePaymentStatus={
+                        updatePaymentStatus
+                      }
+                      onVerifyPayment={
+                        verifyBkashPayment
+                      }
+                      onRejectPayment={
+                        rejectBkashPayment
+                      }
+                    />
 
-                ))}
+                  )
+                )}
 
               </div>
 
@@ -1476,7 +1511,7 @@ const Orders = () => {
 
 
           {/* =====================================================
-              ONLINE ORDERS
+              TODAY ONLINE ORDERS
           ===================================================== */}
           <div>
 
@@ -1485,23 +1520,24 @@ const Orders = () => {
               <div>
 
                 <h2 className="text-xl font-extrabold text-[#252525]">
-                  Online Orders
+                  Today's Online Orders
                 </h2>
 
                 <p className="text-sm text-[#8A806B] mt-1">
-                  bKash advance payment orders
+                  bKash advance payment orders today
                 </p>
 
               </div>
 
+
               <span className="px-3 py-1 rounded-full bg-pink-50 border border-pink-100 text-sm font-bold text-pink-600">
-                {onlineOrders.length}
+                {todayOnlineOrders.length}
               </span>
 
             </div>
 
 
-            {onlineOrders.length === 0 ? (
+            {todayOnlineOrders.length === 0 ? (
 
               <div className="bg-white rounded-2xl border border-[#E4E0D7] p-10 text-center">
 
@@ -1511,7 +1547,7 @@ const Orders = () => {
                 />
 
                 <p className="mt-3 font-semibold text-[#252525]">
-                  No online orders yet.
+                  No online orders today.
                 </p>
 
               </div>
@@ -1520,26 +1556,28 @@ const Orders = () => {
 
               <div className="space-y-5">
 
-                {onlineOrders.map((order) => (
+                {todayOnlineOrders.map(
+                  (order) => (
 
-                  <OrderCard
-                    key={order.id}
-                    order={order}
-                    onUpdateOrderStatus={
-                      updateOrderStatus
-                    }
-                    onUpdatePaymentStatus={
-                      updatePaymentStatus
-                    }
-                    onVerifyPayment={
-                      verifyBkashPayment
-                    }
-                    onRejectPayment={
-                      rejectBkashPayment
-                    }
-                  />
+                    <OrderCard
+                      key={order.id}
+                      order={order}
+                      onUpdateOrderStatus={
+                        updateOrderStatus
+                      }
+                      onUpdatePaymentStatus={
+                        updatePaymentStatus
+                      }
+                      onVerifyPayment={
+                        verifyBkashPayment
+                      }
+                      onRejectPayment={
+                        rejectBkashPayment
+                      }
+                    />
 
-                ))}
+                  )
+                )}
 
               </div>
 

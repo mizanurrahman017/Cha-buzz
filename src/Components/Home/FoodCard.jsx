@@ -16,17 +16,104 @@ const FoodCard = ({ food }) => {
   const { t } = useLanguage();
 
   // =====================================================
-  // ADD TO CART
+  // ADD TO CART + FLY ANIMATION
   // =====================================================
-  const handleAddToCart = () => {
+  const handleAddToCart = (event) => {
+    // First add food to cart
     addToCart(food);
+
+    // Get clicked image/card element
+    const imageContainer =
+      event.currentTarget.closest("[data-food-image]");
+
+    // Get navbar cart
+    const cartElement =
+      document.getElementById("navbar-cart");
+
+    if (!imageContainer || !cartElement) return;
+
+    // Get positions
+    const imageRect =
+      imageContainer.getBoundingClientRect();
+
+    const cartRect =
+      cartElement.getBoundingClientRect();
+
+    // Create flying image
+    const flyingImage =
+      document.createElement("img");
+
+    flyingImage.src = food.image;
+    flyingImage.alt = food.name;
+
+    // Starting position
+    flyingImage.style.position = "fixed";
+    flyingImage.style.left = `${imageRect.left}px`;
+    flyingImage.style.top = `${imageRect.top}px`;
+
+    flyingImage.style.width = `${imageRect.width}px`;
+    flyingImage.style.height = `${imageRect.height}px`;
+
+    flyingImage.style.objectFit = "cover";
+    flyingImage.style.borderRadius = "16px";
+
+    flyingImage.style.zIndex = "9999";
+    flyingImage.style.pointerEvents = "none";
+
+    flyingImage.style.boxShadow =
+      "0 10px 30px rgba(0,0,0,0.25)";
+
+    flyingImage.style.transition =
+      "all 700ms cubic-bezier(0.4, 0, 0.2, 1)";
+
+    document.body.appendChild(flyingImage);
+
+    // Force browser to render starting position
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        flyingImage.style.left = `${
+          cartRect.left + cartRect.width / 2 - 20
+        }px`;
+
+        flyingImage.style.top = `${
+          cartRect.top + cartRect.height / 2 - 20
+        }px`;
+
+        flyingImage.style.width = "40px";
+        flyingImage.style.height = "40px";
+
+        flyingImage.style.borderRadius = "50%";
+
+        flyingImage.style.opacity = "0.3";
+
+        flyingImage.style.transform =
+          "scale(0.5) rotate(10deg)";
+      });
+    });
+
+    // Remove animation image after animation
+    setTimeout(() => {
+      flyingImage.remove();
+
+      // Small cart bounce
+      cartElement.classList.add(
+        "scale-125"
+      );
+
+      setTimeout(() => {
+        cartElement.classList.remove(
+          "scale-125"
+        );
+      }, 180);
+    }, 750);
   };
 
   // =====================================================
   // BUY NOW
   // =====================================================
-  const handleBuyNow = () => {
+  const handleBuyNow = (event) => {
     addToCart(food);
+
     navigate("/cart");
   };
 
@@ -37,6 +124,7 @@ const FoodCard = ({ food }) => {
           FOOD IMAGE
       ===================================================== */}
       <div
+        data-food-image
         onClick={handleAddToCart}
         className="relative h-52 sm:h-56 overflow-hidden cursor-pointer"
         title="Click to add to cart"
@@ -48,17 +136,20 @@ const FoodCard = ({ food }) => {
           className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
         />
 
-        {/* CATEGORY BADGE */}
+        {/* CATEGORY */}
         <span className="absolute top-3 left-3 bg-white/95 backdrop-blur-sm text-[#3E2415] text-xs font-semibold px-3 py-1.5 rounded-full shadow-sm">
           {food.category}
         </span>
 
-        {/* IMAGE HOVER OVERLAY */}
+        {/* HOVER */}
         <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all duration-300 flex items-center justify-center">
 
           <div className="opacity-0 group-hover:opacity-100 transition-all duration-300 bg-white/95 text-[#5A2E16] px-4 py-2 rounded-full text-xs sm:text-sm font-semibold shadow-lg">
+
             <FaShoppingCart className="inline mr-2" />
+
             {t("addToCart")}
+
           </div>
 
         </div>
@@ -70,7 +161,6 @@ const FoodCard = ({ food }) => {
       ===================================================== */}
       <div className="p-4">
 
-        {/* FOOD NAME */}
         <h3 className="text-base sm:text-lg font-bold text-[#252525] truncate">
           {food.name}
         </h3>
@@ -117,7 +207,7 @@ const FoodCard = ({ food }) => {
         </button>
 
         {/* =====================================================
-            BUY NOW BUTTON
+            BUY NOW
         ===================================================== */}
         <button
           type="button"
@@ -132,6 +222,7 @@ const FoodCard = ({ food }) => {
         </button>
 
       </div>
+
     </div>
   );
 };

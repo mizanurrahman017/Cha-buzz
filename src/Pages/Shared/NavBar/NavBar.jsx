@@ -58,22 +58,22 @@ const NavBar = () => {
   // =====================================================
   const suggestions = search.trim()
     ? foods
-        .filter((food) => {
-          const searchValue =
-            search.toLowerCase().trim();
+      .filter((food) => {
+        const searchValue =
+          search.toLowerCase().trim();
 
-          const foodName =
-            food.name?.toLowerCase() || "";
+        const foodName =
+          food.name?.toLowerCase() || "";
 
-          const foodCategory =
-            food.category?.toLowerCase() || "";
+        const foodCategory =
+          food.category?.toLowerCase() || "";
 
-          return (
-            foodName.includes(searchValue) ||
-            foodCategory.includes(searchValue)
-          );
-        })
-        .slice(0, 6)
+        return (
+          foodName.includes(searchValue) ||
+          foodCategory.includes(searchValue)
+        );
+      })
+      .slice(0, 6)
     : [];
 
   // =====================================================
@@ -410,11 +410,11 @@ const NavBar = () => {
                 CART
             ===================================================== */}
             <Link
+              id="navbar-cart"
               to="/cart"
               className="relative w-10 h-10 sm:w-11 sm:h-11 rounded-full bg-[#8B4F26] text-[#FFF9F2] flex items-center justify-center shadow-md hover:bg-[#6B3D1F] hover:scale-105 transition-all duration-300"
               title={t("cart")}
             >
-
               <FaShoppingCart className="text-sm sm:text-base" />
 
               {cartCount > 0 && (
@@ -422,7 +422,6 @@ const NavBar = () => {
                   {cartCount}
                 </span>
               )}
-
             </Link>
 
             {/* =====================================================

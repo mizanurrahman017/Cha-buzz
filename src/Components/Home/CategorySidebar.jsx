@@ -23,7 +23,7 @@ const categoryTranslationKeys = {
   Burger: "burger",
   Pizza: "pizza",
   Chicken: "chicken",
-  Pasta: "pasta",
+  Pasta: "Mixed",
   Sandwich: "sandwich",
   Fries: "fries",
   Desserts: "desserts",

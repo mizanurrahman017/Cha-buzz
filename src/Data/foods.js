@@ -38,7 +38,7 @@ const foods = [
   {
     id: 5,
     name: "Dud denish",
-    category: "Coffee",
+    category: "Desserts",
     price: 100,
     rating: 4.8,
     image:
@@ -47,7 +47,7 @@ const foods = [
   {
     id: 6,
     name: "Meat box",
-    category: "Coffee",
+    category: "Desserts",
     price: 130,
     rating: 4.9,
     image:
@@ -56,7 +56,7 @@ const foods = [
   {
     id: 7,
     name: "Rabri jilapi",
-    category: "Cold Drinks",
+    category: "Pasta",
     price: 70,
     rating: 4.7,
     image:
@@ -65,7 +65,7 @@ const foods = [
   {
     id: 8,
     name: "Shahi malai cha",
-    category: "Cold Drinks",
+    category: "Tea",
     price: 100,
     rating: 4.8,
     image:
@@ -83,7 +83,7 @@ const foods = [
   {
     id: 10,
     name: "Speacial Malai cha",
-    category: "Pasta",
+    category: "Tea",
     price: 60,
     rating: 4.9,
     image:
@@ -101,7 +101,7 @@ const foods = [
   {
     id: 12,
     name: "Lassi",
-    category: "Sandwich",
+    category: "Cold Drinks",
     price: 70,
     rating: 4.8,
     image:
@@ -128,7 +128,7 @@ const foods = [
   {
     id: 15,
     name: "American mix chips",
-    category: "Tea",
+    category: "Pasta",
     price: 100,
     rating: 4.9,
     image:
@@ -137,7 +137,7 @@ const foods = [
   {
     id: 16,
     name: "Banana Milkshake",
-    category: "Tea",
+    category: "Cold Drinks",
     price: 80,
     rating: 4.7,
     image:

@@ -1,6 +1,6 @@
 import React from "react";
 import { useLanguage } from "../../Context/LanguageContext";
-
+// ami 
 const categories = [
   "All Products",
   "Tea",

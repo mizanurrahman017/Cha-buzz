@@ -6,13 +6,10 @@ import { useLanguage } from "../../Context/LanguageContext";
 const categories = [
   "All Products",
   "Tea",
-  "Coffee",
-  "Cold Drinks",
+  // "Coffee",
+  "Shake",
   "Burger",
-  "Pizza",
-  "Chicken",
   "Pasta",
-  "Sandwich",
   "Fries",
   "Desserts",
 ];
@@ -21,7 +18,7 @@ const categoryTranslationKeys = {
   "All Products": "allProducts",
   Tea: "tea",
   Coffee: "coffee",
-  "Cold Drinks": "coldDrinks",
+  "Shake": "Shake",
   Burger: "burger",
   Pizza: "pizza",
   Chicken: "chicken",
@@ -29,7 +26,7 @@ const categoryTranslationKeys = {
   Sandwich: "sandwich",
   Fries: "fries",
   Desserts: "desserts",
-};
+}; 
 
 const CategorySidebar = ({
   activeCategory,

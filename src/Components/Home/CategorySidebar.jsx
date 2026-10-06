@@ -2,6 +2,7 @@ import React from "react";
 import { useLanguage } from "../../Context/LanguageContext";
 // ami 
 // onk din kaj kortechi na 
+// ami onk
 const categories = [
   "All Products",
   "Tea",

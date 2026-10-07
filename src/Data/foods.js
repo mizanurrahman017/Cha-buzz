@@ -183,6 +183,33 @@ const foods = [
     image:
       "/lassi.webp",
   },
+   {
+    id: 20,
+    name: "Water",
+    category: "Drinks",
+    price: 20,
+    rating: 4.8,
+    image:
+      "/water.jpg",
+  },
+   {
+    id: 20,
+    name: "Coca cola 250ml",
+    category: "Drinks",
+    price: 20,
+    rating: 4.8,
+    image:
+      "/coca cola 250.png",
+  },
+   {
+    id: 20,
+    name: "Coca cola 500ml",
+    category: "Drinks",
+    price: 60,
+    rating: 4.8,
+    image:
+      "/coca cola 500.png",
+  },
   
 ];
 

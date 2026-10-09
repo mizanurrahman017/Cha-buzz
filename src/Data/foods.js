@@ -1,4 +1,5 @@
 const foods = [
+
   {
     id: 1,
     name: "Mini Burger",
@@ -184,7 +185,7 @@ const foods = [
       "/lassi.webp",
   },
    {
-    id: 20,
+    id: 21,
     name: "Water",
     category: "Drinks",
     price: 20,
@@ -193,7 +194,7 @@ const foods = [
       "/water.jpg",
   },
    {
-    id: 20,
+    id: 22,
     name: "Coca cola 250ml",
     category: "Drinks",
     price: 20,
@@ -202,7 +203,7 @@ const foods = [
       "/coca cola 250.png",
   },
    {
-    id: 20,
+    id: 23,
     name: "Coca cola 500ml",
     category: "Drinks",
     price: 60,

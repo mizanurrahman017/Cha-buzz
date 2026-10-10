@@ -81,17 +81,18 @@ const ProductDiscountManager = () => {
     try {
       setSavingId(product.id);
 
-      await updateDoc(doc(db, "products", product.id), {
+      const productId = String(product.id);
+
+      await updateDoc(doc(db, "products", productId), {
         discountType: product.discountType || "fixed",
         discountValue,
         discountActive: Boolean(product.discountActive),
       });
-
       setSuccess(`Discount saved for ${product.name}.`);
     } catch (err) {
-      console.error(err);
+      console.error("Discount save error:", err);
       setError(
-        "Could not save discount. Check your Firestore rules and product document."
+        `Save failed: ${err.code || "unknown"} - ${err.message}`
       );
     } finally {
       setSavingId("");

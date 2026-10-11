@@ -1,3 +1,4 @@
+
 import React, {
   createContext,
   useCallback,
@@ -6,47 +7,30 @@ import React, {
   useState,
 } from "react";
 
+import { getProductPricing } from "../Utils/productPricing";
+
 const CartContext = createContext();
 
-export const useCart = () => {
-  return useContext(CartContext);
-};
+export const useCart = () => useContext(CartContext);
 
 const CartProvider = ({ children }) => {
-  // ==========================================
-  // CART ITEMS
-  // ==========================================
-
   const [cartItems, setCartItems] = useState(() => {
     try {
       const savedCart = localStorage.getItem("chaBuzzCart");
-
       return savedCart ? JSON.parse(savedCart) : [];
     } catch (error) {
       console.error("Failed to load cart:", error);
-
       return [];
     }
   });
 
-  // ==========================================
-  // SAVE CART TO LOCAL STORAGE
-  // ==========================================
-
   useEffect(() => {
     try {
-      localStorage.setItem(
-        "chaBuzzCart",
-        JSON.stringify(cartItems)
-      );
+      localStorage.setItem("chaBuzzCart", JSON.stringify(cartItems));
     } catch (error) {
       console.error("Failed to save cart:", error);
     }
   }, [cartItems]);
-
-  // ==========================================
-  // ADD TO CART
-  // ==========================================
 
   const addToCart = (food) => {
     setCartItems((currentItems) => {
@@ -54,19 +38,14 @@ const CartProvider = ({ children }) => {
         (item) => item.id === food.id
       );
 
-      // If item already exists
       if (existingItem) {
         return currentItems.map((item) =>
           item.id === food.id
-            ? {
-                ...item,
-                quantity: item.quantity + 1,
-              }
+            ? { ...item, quantity: Number(item.quantity) + 1 }
             : item
         );
       }
 
-      // New item
       return [
         ...currentItems,
         {
@@ -77,101 +56,64 @@ const CartProvider = ({ children }) => {
     });
   };
 
-  // ==========================================
-  // REMOVE FROM CART
-  // ==========================================
-
   const removeFromCart = (foodId) => {
     setCartItems((currentItems) =>
-      currentItems.filter(
-        (item) => item.id !== foodId
-      )
+      currentItems.filter((item) => item.id !== foodId)
     );
   };
-
-  // ==========================================
-  // INCREASE QUANTITY
-  // ==========================================
 
   const increaseQuantity = (foodId) => {
     setCartItems((currentItems) =>
       currentItems.map((item) =>
         item.id === foodId
-          ? {
-              ...item,
-              quantity: item.quantity + 1,
-            }
+          ? { ...item, quantity: Number(item.quantity) + 1 }
           : item
       )
     );
   };
-
-  // ==========================================
-  // DECREASE QUANTITY
-  // ==========================================
 
   const decreaseQuantity = (foodId) => {
     setCartItems((currentItems) =>
       currentItems
         .map((item) =>
           item.id === foodId
-            ? {
-                ...item,
-                quantity: item.quantity - 1,
-              }
+            ? { ...item, quantity: Number(item.quantity) - 1 }
             : item
         )
-        .filter((item) => item.quantity > 0)
+        .filter((item) => Number(item.quantity) > 0)
     );
   };
-
-  // ==========================================
-  // CLEAR CART
-  // IMPORTANT:
-  // useCallback keeps the function reference stable
-  // ==========================================
 
   const clearCart = useCallback(() => {
     setCartItems([]);
   }, []);
 
-  // ==========================================
-  // CART COUNT
-  // ==========================================
-
   const cartCount = cartItems.reduce(
-    (total, item) =>
-      total + Number(item.quantity),
+    (total, item) => total + Number(item.quantity || 0),
     0
   );
 
-  // ==========================================
-  // TOTAL PRICE
-  // ==========================================
+  // Calculate the discounted subtotal.
+  const totalPrice = cartItems.reduce((total, item) => {
+    const pricing = getProductPricing(item);
+    return total + pricing.discountedPrice * Number(item.quantity || 0);
+  }, 0);
 
-  const totalPrice = cartItems.reduce(
-    (total, item) =>
-      total +
-      Number(item.price) *
-        Number(item.quantity),
-    0
-  );
-
-  // ==========================================
-  // CONTEXT VALUE
-  // ==========================================
+  // Total discount across all quantities.
+  const totalDiscount = cartItems.reduce((total, item) => {
+    const pricing = getProductPricing(item);
+    return total + pricing.discountPerItem * Number(item.quantity || 0);
+  }, 0);
 
   const value = {
     cartItems,
     cartCount,
     totalPrice,
-
+    totalDiscount,
     addToCart,
     removeFromCart,
-
     increaseQuantity,
     decreaseQuantity,
-
     clearCart,
   };
 

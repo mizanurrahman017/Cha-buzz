@@ -1,3 +1,4 @@
+
 import React, {
   createContext,
   useContext,
@@ -6,20 +7,16 @@ import React, {
   useState,
 } from "react";
 
+import { getProductPricing } from "../Utils/productPricing";
+
 const WaiterOrderContext = createContext();
 
-export const useWaiterOrder = () => {
-  return useContext(WaiterOrderContext);
-};
+export const useWaiterOrder = () => useContext(WaiterOrderContext);
 
 const WaiterOrderProvider = ({ children }) => {
-  // ========================================
-  // LOAD WAITER ORDER FROM LOCAL STORAGE
-  // ========================================
   const [orderItems, setOrderItems] = useState(() => {
     try {
       const savedOrder = localStorage.getItem("chaBuzzWaiterOrder");
-
       return savedOrder ? JSON.parse(savedOrder) : [];
     } catch (error) {
       console.error("Failed to load waiter order:", error);
@@ -27,9 +24,6 @@ const WaiterOrderProvider = ({ children }) => {
     }
   });
 
-  // ========================================
-  // SAVE WAITER ORDER TO LOCAL STORAGE
-  // ========================================
   useEffect(() => {
     try {
       localStorage.setItem(
@@ -41,124 +35,122 @@ const WaiterOrderProvider = ({ children }) => {
     }
   }, [orderItems]);
 
-  // ========================================
-  // ADD FOOD TO WAITER ORDER
-  // ========================================
   const addToWaiterOrder = (food) => {
+    const pricing = getProductPricing(food);
+
     setOrderItems((currentItems) => {
       const existingItem = currentItems.find(
-        (item) => item.id === food.id
+        (item) => String(item.id) === String(food.id)
       );
 
-      // Food already exists
       if (existingItem) {
         return currentItems.map((item) =>
-          item.id === food.id
-            ? {
-                ...item,
-                quantity: item.quantity + 1,
-              }
+          String(item.id) === String(food.id)
+            ? { ...item, quantity: Number(item.quantity || 0) + 1 }
             : item
         );
       }
 
-      // New food
       return [
         ...currentItems,
         {
           id: food.id,
           name: food.name,
-          price: Number(food.price),
-          image: food.image,
-          category: food.category,
+          price: pricing.regularPrice,
+          regularPrice: pricing.regularPrice,
+          discountType: food.discountType || "fixed",
+          discountValue: Number(food.discountValue || 0),
+          discountActive: food.discountActive === true,
+          discountPerItem: pricing.discountPerItem,
+          discountedPrice: pricing.discountedPrice,
+          packingCharge: Math.max(
+            0,
+            Number(food.packingCharge) || 0
+          ),
+          image: food.image || "",
+          category: food.category || "",
           quantity: 1,
         },
       ];
     });
   };
 
-  // ========================================
-  // INCREASE QUANTITY
-  // ========================================
   const increaseWaiterQuantity = (foodId) => {
-    setOrderItems((currentItems) =>
-      currentItems.map((item) =>
-        item.id === foodId
-          ? {
-              ...item,
-              quantity: item.quantity + 1,
-            }
+    setOrderItems((items) =>
+      items.map((item) =>
+        String(item.id) === String(foodId)
+          ? { ...item, quantity: Number(item.quantity || 0) + 1 }
           : item
       )
     );
   };
 
-  // ========================================
-  // DECREASE QUANTITY
-  // ========================================
   const decreaseWaiterQuantity = (foodId) => {
-    setOrderItems((currentItems) =>
-      currentItems
+    setOrderItems((items) =>
+      items
         .map((item) =>
-          item.id === foodId
-            ? {
-                ...item,
-                quantity: item.quantity - 1,
-              }
+          String(item.id) === String(foodId)
+            ? { ...item, quantity: Number(item.quantity || 0) - 1 }
             : item
         )
         .filter((item) => item.quantity > 0)
     );
   };
 
-  // ========================================
-  // REMOVE FOOD
-  // ========================================
   const removeFromWaiterOrder = (foodId) => {
-    setOrderItems((currentItems) =>
-      currentItems.filter(
-        (item) => item.id !== foodId
-      )
+    setOrderItems((items) =>
+      items.filter((item) => String(item.id) !== String(foodId))
     );
   };
 
-  // ========================================
-  // CLEAR CURRENT ORDER
-  // ========================================
-  const clearWaiterOrder = () => {
-    setOrderItems([]);
-  };
+  const clearWaiterOrder = () => setOrderItems([]);
 
-  // ========================================
-  // TOTAL PRICE
-  // ========================================
-  const totalPrice = useMemo(() => {
-    return orderItems.reduce(
-      (total, item) =>
-        total + Number(item.price) * item.quantity,
-      0
-    );
-  }, [orderItems]);
+  const totalPrice = useMemo(
+    () =>
+      orderItems.reduce((total, item) => {
+        const pricing = getProductPricing(item);
+        return total + pricing.discountedPrice * Number(item.quantity || 0);
+      }, 0),
+    [orderItems]
+  );
 
-  // ========================================
-  // TOTAL ITEMS
-  // ========================================
-  const totalItems = useMemo(() => {
-    return orderItems.reduce(
-      (total, item) =>
-        total + item.quantity,
-      0
-    );
-  }, [orderItems]);
+  const totalDiscount = useMemo(
+    () =>
+      orderItems.reduce((total, item) => {
+        const pricing = getProductPricing(item);
+        return total + pricing.discountPerItem * Number(item.quantity || 0);
+      }, 0),
+    [orderItems]
+  );
 
-  // ========================================
-  // CONTEXT VALUE
-  // ========================================
+  // Packing charge is set per food by the admin.
+  const totalPackingCharge = useMemo(
+    () =>
+      orderItems.reduce(
+        (total, item) =>
+          total +
+          Math.max(0, Number(item.packingCharge) || 0) *
+            Number(item.quantity || 0),
+        0
+      ),
+    [orderItems]
+  );
+
+  const totalItems = useMemo(
+    () =>
+      orderItems.reduce(
+        (total, item) => total + Number(item.quantity || 0),
+        0
+      ),
+    [orderItems]
+  );
+
   const waiterOrderInfo = {
     orderItems,
     totalPrice,
+    totalDiscount,
+    totalPackingCharge,
     totalItems,
-
     addToWaiterOrder,
     increaseWaiterQuantity,
     decreaseWaiterQuantity,

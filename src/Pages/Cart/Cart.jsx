@@ -10,7 +10,10 @@ import {
   FaCopy,
 } from "react-icons/fa";
 import { Link } from "react-router";
+
 import { useCart } from "../../Contexts/CartContext";
+import { useLanguage } from "../../Context/LanguageContext";
+import { getProductPricing } from "../../Utils/productPricing";
 
 import {
   addDoc,
@@ -22,17 +25,20 @@ import {
 } from "firebase/firestore";
 
 import { db } from "../../Firebase/Firebase.config";
-import { useLanguage } from "../../Context/LanguageContext";
 
-// =====================================================
-// Cha Buzz bKash number
-// =====================================================
 const BKASH_NUMBER = "01869438544";
+const FIXED_DELIVERY_FEE = 50;
+
+const money = (value) =>
+  `৳${Number(value || 0).toLocaleString("en-BD", {
+    maximumFractionDigits: 2,
+  })}`;
 
 const Cart = () => {
   const {
     cartItems,
     totalPrice,
+    totalDiscount,
     increaseQuantity,
     decreaseQuantity,
     removeFromCart,
@@ -53,12 +59,49 @@ const Cart = () => {
   const [loading, setLoading] = useState(false);
   const [submittedOrderId, setSubmittedOrderId] = useState(null);
 
-  const deliveryFee = cartItems.length > 0 ? 50 : 0;
-  const grandTotal = Number(totalPrice) + Number(deliveryFee);
+  // Recalculate pricing from the current cart items.
+  const pricedItems = cartItems.map((item) => {
+    const pricing = getProductPricing(item);
+    const quantity = Number(item.quantity || 0);
 
-  // =====================================================
-  // Form change
-  // =====================================================
+    return {
+      ...item,
+      regularPrice: pricing.regularPrice,
+      discountPerItem: pricing.discountPerItem,
+      discountedPrice: pricing.discountedPrice,
+      hasDiscount: pricing.hasDiscount,
+      quantity,
+      lineSubtotal: pricing.regularPrice * quantity,
+      lineDiscount: pricing.discountPerItem * quantity,
+      lineTotal: pricing.discountedPrice * quantity,
+    };
+  });
+
+  const originalSubtotal = pricedItems.reduce(
+    (sum, item) => sum + item.lineSubtotal,
+    0
+  );
+
+  const calculatedDiscount = pricedItems.reduce(
+    (sum, item) => sum + item.lineDiscount,
+    0
+  );
+
+  // CartContext totalPrice is already calculated using discounted prices.
+  const subtotal = Number(totalPrice || 0);
+  const productDiscount = Number(
+    totalDiscount ?? calculatedDiscount
+  );
+
+  const deliveryFee =
+    cartItems.length > 0 ? FIXED_DELIVERY_FEE : 0;
+
+  // Packing charge is not collected from online customers here.
+  const packingCharge = 0;
+
+  const grandTotal =
+    subtotal + deliveryFee + packingCharge;
+
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -68,18 +111,12 @@ const Cart = () => {
     }));
   };
 
-  // =====================================================
-  // Copy bKash number
-  // =====================================================
   const handleCopyNumber = async () => {
     try {
       await navigator.clipboard.writeText(BKASH_NUMBER);
-      alert(
-        t("bkashNumberCopied") || "bKash number copied!"
-      );
+      alert(t("bkashNumberCopied") || "bKash number copied!");
     } catch (error) {
       console.error("Copy failed:", error);
-
       alert(
         t("copyNumberManually") ||
           "Please copy the number manually."
@@ -87,9 +124,6 @@ const Cart = () => {
     }
   };
 
-  // =====================================================
-  // Place Order
-  // =====================================================
   const handlePlaceOrder = async (e) => {
     e.preventDefault();
 
@@ -99,37 +133,31 @@ const Cart = () => {
     }
 
     if (!formData.name.trim()) {
-      alert(
-        t("enterName") || "Please enter your name."
-      );
+      alert(t("enterName") || "Please enter your name.");
       return;
     }
 
     if (!formData.phone.trim()) {
-      alert(
-        t("enterPhone") ||
-          "Please enter your phone number."
-      );
+      alert(t("enterPhone") || "Please enter your phone number.");
       return;
     }
 
     if (!formData.address.trim()) {
-      alert(
-        t("enterAddress") ||
-          "Please enter your delivery address."
-      );
+      alert(t("enterAddress") || "Please enter your delivery address.");
       return;
     }
 
     if (!paymentCompleted) {
       alert(
         t("sendPaymentFirst") ||
-          `Please send ৳${grandTotal} to our bKash number first.`
+          `Please send ${money(grandTotal)} to our bKash number first.`
       );
       return;
     }
 
-    if (!transactionId.trim()) {
+    const cleanTransactionId = transactionId.trim();
+
+    if (!cleanTransactionId) {
       alert(
         t("enterTransactionId") ||
           "Please enter your bKash Transaction ID."
@@ -137,64 +165,51 @@ const Cart = () => {
       return;
     }
 
-    // =====================================================
-    // Confirm payment
-    // =====================================================
     const confirmPayment = window.confirm(
       t("confirmPayment") ||
-        `Have you sent ৳${grandTotal} to bKash number ${BKASH_NUMBER}?`
+        `Have you sent ${money(grandTotal)} to bKash number ${BKASH_NUMBER}?`
     );
 
-    if (!confirmPayment) {
-      return;
-    }
+    if (!confirmPayment) return;
 
     try {
       setLoading(true);
 
-      const cleanTransactionId = transactionId.trim();
-
-      // =====================================================
-      // Prevent duplicate Transaction ID
-      // =====================================================
+      // Check whether this Transaction ID has already been submitted.
       const duplicateQuery = query(
         collection(db, "orders"),
-        where(
-          "transactionId",
-          "==",
-          cleanTransactionId
-        )
+        where("transactionId", "==", cleanTransactionId)
       );
 
-      const duplicateSnapshot = await getDocs(
-        duplicateQuery
-      );
+      const duplicateSnapshot = await getDocs(duplicateQuery);
 
       if (!duplicateSnapshot.empty) {
         alert(
           t("duplicateTransaction") ||
             "This Transaction ID has already been submitted."
         );
-
-        setLoading(false);
         return;
       }
 
-      // =====================================================
-      // Prepare order items
-      // =====================================================
-      const orderItems = cartItems.map((item) => ({
+      // Save a snapshot of product prices and discounts at order time.
+      const orderItems = pricedItems.map((item) => ({
         id: item.id,
         name: item.name,
-        price: Number(item.price),
-        quantity: Number(item.quantity),
         image: item.image || "",
         category: item.category || "",
+        price: item.regularPrice,
+        regularPrice: item.regularPrice,
+        discountType: item.discountType || "fixed",
+        discountValue: Number(item.discountValue || 0),
+        discountActive: Boolean(item.discountActive),
+        discountPerItem: item.discountPerItem,
+        discountedPrice: item.discountedPrice,
+        quantity: item.quantity,
+        lineSubtotal: item.lineSubtotal,
+        lineDiscount: item.lineDiscount,
+        lineTotal: item.lineTotal,
       }));
 
-      // =====================================================
-      // Firestore Order
-      // =====================================================
       const orderData = {
         items: orderItems,
 
@@ -206,52 +221,40 @@ const Cart = () => {
 
         note: formData.note.trim(),
 
-        subtotal: Number(totalPrice),
+        // Original product price before discounts.
+        originalSubtotal: Number(originalSubtotal),
 
+        // Total discount for all products.
+        productDiscount: Number(productDiscount),
+
+        // Subtotal after product discounts.
+        subtotal: Number(subtotal),
+
+        packingCharge: Number(packingCharge),
         deliveryFee: Number(deliveryFee),
-
         total: Number(grandTotal),
 
         orderSource: "online",
-
         paymentMethod: "bkash",
-
-        // Customer submitted payment proof
         paymentStatus: "submitted",
-
-        // Admin এখনো verify করেনি
         orderStatus: "pending_payment_verification",
 
-        // Customer entered TrxID
         transactionId: cleanTransactionId,
-
-        // Customer says this amount was paid
         paymentAmount: Number(grandTotal),
 
         createdAt: serverTimestamp(),
-
         paymentSubmittedAt: serverTimestamp(),
       };
 
-      // =====================================================
-      // Save Order
-      // =====================================================
       const orderRef = await addDoc(
         collection(db, "orders"),
         orderData
       );
 
-      // =====================================================
-      // Clear cart
-      // =====================================================
       clearCart();
-
       setSubmittedOrderId(orderRef.id);
     } catch (error) {
-      console.error(
-        "Error submitting order:",
-        error
-      );
+      console.error("Error submitting order:", error);
 
       alert(
         t("submitOrderFailed") ||
@@ -262,23 +265,17 @@ const Cart = () => {
     }
   };
 
-  // =====================================================
-  // ORDER SUBMITTED SCREEN
-  // =====================================================
+  // ORDER SUBMITTED
   if (submittedOrderId) {
     return (
       <div className="min-h-screen bg-[#F7F5EF] flex items-center justify-center px-4 py-12">
         <div className="w-full max-w-xl bg-white rounded-3xl border border-[#E4E0D7] shadow-xl p-6 sm:p-10 text-center">
-
           <div className="w-20 h-20 mx-auto rounded-full bg-green-100 flex items-center justify-center mb-6">
-            <FaCheckCircle
-              className="text-green-600"
-              size={42}
-            />
+            <FaCheckCircle className="text-green-600" size={42} />
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-extrabold text-[#252525]">
-            {t("paymentSubmitted")}
+            {t("paymentSubmitted") || "Payment Submitted"}
           </h1>
 
           <p className="mt-3 text-[#77705F] leading-relaxed">
@@ -287,7 +284,6 @@ const Cart = () => {
           </p>
 
           <div className="mt-6 bg-[#F7F5EF] rounded-2xl p-5 text-left">
-
             <p className="text-sm text-[#8A806B]">
               {t("orderId") || "Order ID"}
             </p>
@@ -296,34 +292,26 @@ const Cart = () => {
               {submittedOrderId}
             </p>
 
-            <div className="mt-4">
-              <p className="text-sm text-[#8A806B]">
-                {t("paymentStatus") ||
-                  "Payment Status"}
-              </p>
+            <p className="mt-4 text-sm text-[#8A806B]">
+              {t("paymentStatus") || "Payment Status"}
+            </p>
 
-              <div className="mt-1 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-100 text-amber-700 text-sm font-semibold">
-                <span className="w-2 h-2 rounded-full bg-amber-500"></span>
-
-                {t("waitingVerification") ||
-                  "Waiting for verification"}
-              </div>
-            </div>
+            <span className="mt-1 inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-100 text-amber-700 text-sm font-semibold">
+              <span className="w-2 h-2 rounded-full bg-amber-500" />
+              {t("waitingVerification") || "Waiting for verification"}
+            </span>
           </div>
 
           <div className="mt-6 bg-pink-50 border border-pink-100 rounded-2xl p-5 text-left">
-
             <div className="flex items-center gap-3">
-
               <div className="w-11 h-11 rounded-xl bg-pink-500 text-white flex items-center justify-center">
                 <FaMobileAlt />
               </div>
 
               <div>
                 <p className="font-bold text-[#252525]">
-                  {t("bkashPayment")}
+                  {t("bkashPayment") || "bKash Payment"}
                 </p>
-
                 <p className="text-sm text-[#77705F]">
                   {t("transactionSubmitted") ||
                     "Transaction ID submitted successfully"}
@@ -342,29 +330,22 @@ const Cart = () => {
             className="mt-7 inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-[#252525] text-white font-semibold hover:bg-[#A08E65] transition"
           >
             <FaArrowLeft size={13} />
-            {t("backToHome")}
+            {t("backToHome") || "Back to Home"}
           </Link>
         </div>
       </div>
     );
   }
 
-  // =====================================================
   // EMPTY CART
-  // =====================================================
   if (cartItems.length === 0) {
     return (
       <div className="min-h-screen bg-[#F7F5EF] flex items-center justify-center px-4">
-
         <div className="text-center">
-
-          <div className="text-6xl mb-5">
-            🛒
-          </div>
+          <div className="text-6xl mb-5">🛒</div>
 
           <h1 className="text-2xl sm:text-3xl font-extrabold text-[#252525]">
-            {t("cartEmptyTitle") ||
-              "Your Cart is Empty"}
+            {t("cartEmptyTitle") || "Your Cart is Empty"}
           </h1>
 
           <p className="mt-2 text-[#8A806B]">
@@ -377,9 +358,8 @@ const Cart = () => {
             className="inline-flex items-center gap-2 mt-6 px-6 py-3 rounded-xl bg-[#252525] text-white font-semibold hover:bg-[#A08E65] transition"
           >
             <FaArrowLeft size={13} />
-            {t("continueShopping")}
+            {t("continueShopping") || "Continue Shopping"}
           </Link>
-
         </div>
       </div>
     );
@@ -387,70 +367,51 @@ const Cart = () => {
 
   return (
     <div className="min-h-screen bg-[#F7F5EF] py-8 sm:py-12">
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-
-        {/* =====================================================
-            Header
-        ===================================================== */}
         <div className="mb-8">
-
           <Link
             to="/"
             className="inline-flex items-center gap-2 text-sm font-semibold text-[#77705F] hover:text-[#252525] transition"
           >
             <FaArrowLeft size={12} />
-            {t("continueShopping")}
+            {t("continueShopping") || "Continue Shopping"}
           </Link>
 
           <h1 className="mt-4 text-3xl sm:text-4xl font-extrabold text-[#252525]">
-            {t("checkout")}
+            {t("checkout") || "Checkout"}
           </h1>
 
           <p className="mt-2 text-[#8A806B]">
             {t("checkoutDescription") ||
               "Review your order and complete bKash payment."}
           </p>
-
         </div>
 
         <form onSubmit={handlePlaceOrder}>
-
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-            {/* =====================================================
-                LEFT SIDE
-            ===================================================== */}
+            {/* LEFT */}
             <div className="lg:col-span-2 space-y-6">
-
-              {/* =====================================================
-                  Cart Items
-              ===================================================== */}
+              {/* CART ITEMS */}
               <div className="bg-white rounded-2xl border border-[#E4E0D7] shadow-sm overflow-hidden">
-
                 <div className="px-5 sm:px-6 py-5 border-b border-[#E4E0D7]">
-
                   <h2 className="text-xl font-bold text-[#252525]">
-                    {t("yourOrder")}
+                    {t("yourOrder") || "Your Order"}
                   </h2>
 
                   <p className="text-sm text-[#8A806B] mt-1">
                     {cartItems.length}{" "}
                     {cartItems.length !== 1
-                      ? t("foodItems")
-                      : t("foodItem")}
+                      ? t("foodItems") || "items"
+                      : t("foodItem") || "item"}
                   </p>
-
                 </div>
 
                 <div className="divide-y divide-[#E4E0D7]">
-
-                  {cartItems.map((item) => (
+                  {pricedItems.map((item) => (
                     <div
                       key={item.id}
                       className="p-4 sm:p-5 flex gap-4"
                     >
-
                       <img
                         src={item.image}
                         alt={item.name}
@@ -458,43 +419,48 @@ const Cart = () => {
                       />
 
                       <div className="flex-1 min-w-0">
-
                         <div className="flex justify-between gap-3">
-
                           <div>
-
                             <h3 className="font-bold text-[#252525] text-sm sm:text-base">
                               {item.name}
                             </h3>
 
-                            <p className="text-xs text-[#8A806B] mt-1">
-                              ৳{item.price}{" "}
-                              {t("each")}
-                            </p>
+                            <div className="flex items-baseline flex-wrap gap-2 mt-1">
+                              {item.hasDiscount && (
+                                <span className="text-sm text-gray-400 line-through">
+                                  {money(item.regularPrice)}
+                                </span>
+                              )}
 
+                              <span className="text-sm font-semibold text-green-700">
+                                {money(item.discountedPrice)}{" "}
+                                {t("each") || "each"}
+                              </span>
+                            </div>
+
+                            {item.hasDiscount && (
+                              <p className="mt-1 text-xs text-green-700">
+                                You save {money(item.discountPerItem)} per item
+                              </p>
+                            )}
                           </div>
 
                           <button
                             type="button"
-                            onClick={() =>
-                              removeFromCart(item.id)
-                            }
+                            onClick={() => removeFromCart(item.id)}
+                            aria-label={`Remove ${item.name}`}
                             className="text-red-400 hover:text-red-600 transition"
                           >
                             <FaTrash size={14} />
                           </button>
-
                         </div>
 
-                        <div className="mt-3 flex items-center justify-between">
-
+                        <div className="mt-3 flex items-center justify-between gap-3">
                           <div className="flex items-center border border-[#D8D5CC] rounded-lg overflow-hidden">
-
                             <button
                               type="button"
-                              onClick={() =>
-                                decreaseQuantity(item.id)
-                              }
+                              onClick={() => decreaseQuantity(item.id)}
+                              aria-label="Decrease quantity"
                               className="w-8 h-8 flex items-center justify-center hover:bg-[#F7F5EF]"
                             >
                               <FaMinus size={10} />
@@ -506,38 +472,36 @@ const Cart = () => {
 
                             <button
                               type="button"
-                              onClick={() =>
-                                increaseQuantity(item.id)
-                              }
+                              onClick={() => increaseQuantity(item.id)}
+                              aria-label="Increase quantity"
                               className="w-8 h-8 flex items-center justify-center hover:bg-[#F7F5EF]"
                             >
                               <FaPlus size={10} />
                             </button>
-
                           </div>
 
-                          <p className="font-extrabold text-[#252525]">
-                            ৳
-                            {Number(item.price) *
-                              Number(item.quantity)}
-                          </p>
+                          <div className="text-right">
+                            {item.hasDiscount && (
+                              <p className="text-xs text-gray-400 line-through">
+                                {money(item.lineSubtotal)}
+                              </p>
+                            )}
 
+                            <p className="font-extrabold text-[#252525]">
+                              {money(item.lineTotal)}
+                            </p>
+                          </div>
                         </div>
                       </div>
                     </div>
                   ))}
-
                 </div>
               </div>
 
-              {/* =====================================================
-                  Customer Information
-              ===================================================== */}
+              {/* CUSTOMER INFORMATION */}
               <div className="bg-white rounded-2xl border border-[#E4E0D7] shadow-sm p-5 sm:p-6">
-
                 <h2 className="text-xl font-bold text-[#252525]">
-                  {t("customerInformation") ||
-                    "Delivery Information"}
+                  {t("customerInformation") || "Delivery Information"}
                 </h2>
 
                 <p className="text-sm text-[#8A806B] mt-1 mb-6">
@@ -546,11 +510,9 @@ const Cart = () => {
                 </p>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
-                  {/* Name */}
                   <div>
                     <label className="block text-sm font-semibold text-[#252525] mb-2">
-                      {t("name")} *
+                      {t("name") || "Name"} *
                     </label>
 
                     <input
@@ -558,19 +520,15 @@ const Cart = () => {
                       name="name"
                       value={formData.name}
                       onChange={handleChange}
-                      placeholder={
-                        t("fullNamePlaceholder") ||
-                        "Your full name"
-                      }
+                      placeholder="Your full name"
                       className="w-full h-11 px-4 rounded-xl border border-[#D8D5CC] outline-none focus:border-[#252525]"
                       required
                     />
                   </div>
 
-                  {/* Phone */}
                   <div>
                     <label className="block text-sm font-semibold text-[#252525] mb-2">
-                      {t("phoneNumber")} *
+                      {t("phoneNumber") || "Phone Number"} *
                     </label>
 
                     <input
@@ -584,295 +542,235 @@ const Cart = () => {
                     />
                   </div>
 
-                  {/* Address */}
                   <div className="sm:col-span-2">
-
                     <label className="block text-sm font-semibold text-[#252525] mb-2">
-                      {t("address")} *
+                      {t("address") || "Address"} *
                     </label>
 
                     <textarea
                       name="address"
                       value={formData.address}
                       onChange={handleChange}
-                      placeholder={
-                        t("addressPlaceholder") ||
-                        "Enter your complete delivery address"
-                      }
+                      placeholder="Enter your complete delivery address"
                       rows="3"
                       className="w-full px-4 py-3 rounded-xl border border-[#D8D5CC] outline-none focus:border-[#252525] resize-none"
                       required
                     />
                   </div>
 
-                  {/* Note */}
                   <div className="sm:col-span-2">
-
                     <label className="block text-sm font-semibold text-[#252525] mb-2">
-                      {t("note")}
+                      {t("note") || "Note"}
                     </label>
 
                     <textarea
                       name="note"
                       value={formData.note}
                       onChange={handleChange}
-                      placeholder={
-                        t("notePlaceholder") ||
-                        "Any special instruction?"
-                      }
+                      placeholder="Any special instruction?"
                       rows="3"
                       className="w-full px-4 py-3 rounded-xl border border-[#D8D5CC] outline-none focus:border-[#252525] resize-none"
                     />
-
                   </div>
-
                 </div>
               </div>
 
-              {/* =====================================================
-                  bKash Payment
-              ===================================================== */}
+              {/* BKASH PAYMENT */}
               <div className="bg-white rounded-2xl border border-pink-200 shadow-sm overflow-hidden">
-
                 <div className="p-5 sm:p-6">
-
                   <div className="flex items-center gap-3">
-
                     <div className="w-12 h-12 rounded-xl bg-pink-500 text-white flex items-center justify-center">
                       <FaMobileAlt size={20} />
                     </div>
 
                     <div>
-
                       <h2 className="text-xl font-bold text-[#252525]">
-                        {t("bkashPayment")}
+                        {t("bkashPayment") || "bKash Payment"}
                       </h2>
 
                       <p className="text-sm text-[#8A806B]">
-                        {t("advancePaymentRequired")}
+                        {t("advancePaymentRequired") ||
+                          "Advance payment required"}
                       </p>
-
                     </div>
                   </div>
 
-                  {/* Payment instruction */}
                   <div className="mt-6 bg-pink-50 border border-pink-100 rounded-2xl p-5">
-
                     <p className="text-sm font-semibold text-[#252525]">
                       {t("step1SendExactAmount") ||
                         "Step 1 — Send exact amount"}
                     </p>
 
                     <p className="mt-2 text-sm text-[#77705F]">
-                      {t("sendExactly") ||
-                        "Send exactly"}
+                      {t("sendExactly") || "Send exactly"}
                     </p>
 
                     <p className="text-3xl font-extrabold text-pink-600 mt-1">
-                      ৳{grandTotal}
+                      {money(grandTotal)}
                     </p>
 
                     <div className="mt-4">
-
                       <p className="text-xs text-[#8A806B] mb-2">
                         {t("sendToBkashNumber") ||
                           "Send to this bKash number"}
                       </p>
 
                       <div className="flex items-center gap-2">
-
-                        <div className="flex-1 h-12 px-4 rounded-xl bg-white border border-pink-200 flex items-center font-extrabold text-lg text-[#252525]">
+                        <div className="flex-1 min-w-0 h-12 px-4 rounded-xl bg-white border border-pink-200 flex items-center font-extrabold text-lg text-[#252525]">
                           {BKASH_NUMBER}
                         </div>
 
                         <button
                           type="button"
                           onClick={handleCopyNumber}
-                          className="h-12 w-12 rounded-xl bg-pink-500 text-white flex items-center justify-center hover:bg-pink-600 transition"
-                          title={
-                            t("copyNumber") ||
-                            "Copy number"
-                          }
+                          className="h-12 w-12 shrink-0 rounded-xl bg-pink-500 text-white flex items-center justify-center hover:bg-pink-600 transition"
+                          title="Copy number"
                         >
                           <FaCopy size={15} />
                         </button>
-
                       </div>
                     </div>
 
                     <div className="mt-5 text-sm text-[#77705F] space-y-1">
-
-                      <p>
-                        •{" "}
-                        {t("sendExactAmount") ||
-                          "Send the exact order amount."}
-                      </p>
-
-                      <p>
-                        •{" "}
-                        {t("dontSharePinOtp") ||
-                          "Do not send your bKash PIN or OTP to anyone."}
-                      </p>
-
-                      <p>
-                        •{" "}
-                        {t("keepTransactionId") ||
-                          "Keep your transaction ID after payment."}
-                      </p>
-
+                      <p>• Send the exact order amount.</p>
+                      <p>• Do not share your bKash PIN or OTP.</p>
+                      <p>• Keep your transaction ID after payment.</p>
                     </div>
                   </div>
 
-                  {/* Payment completed checkbox */}
                   <label className="mt-5 flex items-start gap-3 cursor-pointer">
-
                     <input
                       type="checkbox"
                       checked={paymentCompleted}
                       onChange={(e) =>
-                        setPaymentCompleted(
-                          e.target.checked
-                        )
+                        setPaymentCompleted(e.target.checked)
                       }
                       className="mt-1 w-5 h-5 accent-pink-500"
                     />
 
                     <span className="text-sm text-[#252525]">
-                      {t("paymentSentConfirmation") ||
-                        "I have sent"}{" "}
-                      <strong>
-                        ৳{grandTotal}
-                      </strong>{" "}
-                      {t("toBkashNumberAbove") ||
-                        "to the above bKash number."}
+                      I have sent <strong>{money(grandTotal)}</strong> to
+                      the above bKash number.
                     </span>
-
                   </label>
 
-                  {/* Transaction ID */}
                   <div className="mt-5">
-
                     <label className="block text-sm font-semibold text-[#252525] mb-2">
-                      {t("transactionId")} *
+                      {t("transactionId") || "Transaction ID"} *
                     </label>
 
                     <input
                       type="text"
                       value={transactionId}
                       onChange={(e) =>
-                        setTransactionId(
-                          e.target.value
-                        )
+                        setTransactionId(e.target.value)
                       }
-                      placeholder={
-                        t("transactionPlaceholder") ||
-                        "Enter your bKash TrxID"
-                      }
+                      placeholder="Enter your bKash TrxID"
                       className="w-full h-12 px-4 rounded-xl border border-[#D8D5CC] outline-none focus:border-pink-500 uppercase"
                       required
                     />
 
                     <p className="mt-2 text-xs text-[#8A806B]">
-                      {t("transactionExample") ||
-                        "Example: 8KJ7A6B2CD"}
+                      Example: 8KJ7A6B2CD
                     </p>
-
                   </div>
 
-                  {/* Verification notice */}
                   <div className="mt-5 flex gap-3 bg-[#F7F5EF] rounded-xl p-4">
-
                     <FaLock
                       className="mt-0.5 text-[#A08E65] shrink-0"
                       size={14}
                     />
 
                     <p className="text-xs sm:text-sm text-[#77705F] leading-relaxed">
-                      {t("paymentVerificationNotice") ||
-                        "Your payment will be manually verified by Cha Buzz admin. Your order will only be confirmed after the Transaction ID and payment amount match our bKash transaction record."}
+                      Your payment will be manually verified by Cha Buzz
+                      admin. Your order will only be confirmed after the
+                      Transaction ID and payment amount are checked.
                     </p>
-
                   </div>
-
                 </div>
               </div>
             </div>
 
-            {/* =====================================================
-                RIGHT SIDE — SUMMARY
-            ===================================================== */}
+            {/* RIGHT: ORDER SUMMARY */}
             <div className="lg:col-span-1">
-
               <div className="bg-white rounded-2xl border border-[#E4E0D7] shadow-sm p-5 sm:p-6 lg:sticky lg:top-6">
-
                 <h2 className="text-xl font-bold text-[#252525]">
-                  {t("orderSummary")}
+                  {t("orderSummary") || "Order Summary"}
                 </h2>
 
                 <div className="mt-5 space-y-3">
-
-                  <div className="flex justify-between text-sm">
-
+                  <div className="flex justify-between gap-3 text-sm">
                     <span className="text-[#8A806B]">
-                      {t("subtotal")}
+                      Original subtotal
                     </span>
-
                     <span className="font-semibold text-[#252525]">
-                      ৳{totalPrice}
+                      {money(originalSubtotal)}
                     </span>
-
                   </div>
 
-                  <div className="flex justify-between text-sm">
-
-                    <span className="text-[#8A806B]">
-                      {t("deliveryFee")}
+                  <div className="flex justify-between gap-3 text-sm">
+                    <span className="text-green-700">
+                      Product discount
                     </span>
-
-                    <span className="font-semibold text-[#252525]">
-                      ৳{deliveryFee}
+                    <span className="font-semibold text-green-700">
+                      −{money(productDiscount)}
                     </span>
-
                   </div>
 
-                  <div className="border-t border-[#E4E0D7] pt-4 flex justify-between">
+                  <div className="flex justify-between gap-3 text-sm">
+                    <span className="text-[#8A806B]">
+                      {t("subtotal") || "Subtotal after discount"}
+                    </span>
+                    <span className="font-semibold text-[#252525]">
+                      {money(subtotal)}
+                    </span>
+                  </div>
 
+                  <div className="flex justify-between gap-3 text-sm">
+                    <span className="text-[#8A806B]">
+                      Packing charge
+                    </span>
+                    <span className="font-semibold text-[#252525]">
+                      {money(packingCharge)}
+                    </span>
+                  </div>
+
+                  <div className="flex justify-between gap-3 text-sm">
+                    <span className="text-[#8A806B]">
+                      {t("deliveryFee") || "Delivery fee"}
+                    </span>
+                    <span className="font-semibold text-[#252525]">
+                      {money(deliveryFee)}
+                    </span>
+                  </div>
+
+                  <div className="border-t border-[#E4E0D7] pt-4 flex justify-between gap-3">
                     <span className="font-bold text-[#252525]">
-                      {t("total")}
+                      {t("total") || "Total"}
                     </span>
-
                     <span className="text-2xl font-extrabold text-[#252525]">
-                      ৳{grandTotal}
+                      {money(grandTotal)}
                     </span>
-
                   </div>
                 </div>
 
-                {/* Payment method */}
                 <div className="mt-6 p-4 rounded-xl bg-pink-50 border border-pink-100">
-
                   <div className="flex items-center gap-3">
-
                     <div className="w-10 h-10 rounded-lg bg-pink-500 text-white flex items-center justify-center">
                       <FaMobileAlt size={16} />
                     </div>
 
                     <div>
-
                       <p className="font-bold text-[#252525]">
-                        {t("bkashPayment")}
+                        {t("bkashPayment") || "bKash Payment"}
                       </p>
-
                       <p className="text-xs text-[#8A806B]">
-                        {t("advancePayment") ||
-                          "Advance payment"}
+                        {t("advancePayment") || "Advance payment"}
                       </p>
-
                     </div>
                   </div>
                 </div>
 
-                {/* Place Order */}
                 <button
                   type="submit"
                   disabled={
@@ -884,14 +782,13 @@ const Cart = () => {
                 >
                   {loading ? (
                     <>
-                      <span className="loading loading-spinner loading-sm"></span>
-                      {t("submitting") ||
-                        "Submitting..."}
+                      <span className="loading loading-spinner loading-sm" />
+                      {t("submitting") || "Submitting..."}
                     </>
                   ) : (
                     <>
                       <FaCheckCircle size={15} />
-                      {t("submitOrder")}
+                      {t("submitOrder") || "Submit Order"}
                     </>
                   )}
                 </button>
@@ -900,7 +797,6 @@ const Cart = () => {
                   {t("paymentContactNotice") ||
                     "We'll contact you once the payment is verified and your order is confirmed."}
                 </p>
-
               </div>
             </div>
           </div>

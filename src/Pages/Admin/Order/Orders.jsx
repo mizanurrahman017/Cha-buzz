@@ -4,6 +4,8 @@ import React, {
   useState,
 } from "react";
 
+import { Link } from "react-router";
+
 import {
   collection,
   doc,
@@ -30,7 +32,6 @@ import {
 import { db } from "../../../Firebase/Firebase.config";
 
 import { useAuth } from "../../../Context/AuthContext";
-
 
 // =====================================================
 // STATUS CONFIG
@@ -93,7 +94,6 @@ const statusConfig = {
   },
 };
 
-
 // =====================================================
 // FORMAT DATE
 // =====================================================
@@ -115,7 +115,6 @@ const formatDate = (timestamp) => {
   }
 };
 
-
 // =====================================================
 // CHECK TODAY - BANGLADESH TIME
 // =====================================================
@@ -126,7 +125,6 @@ const isToday = (timestamp) => {
 
   try {
     const date = timestamp.toDate();
-
     const today = new Date();
 
     const dateInBD = new Intl.DateTimeFormat(
@@ -155,7 +153,6 @@ const isToday = (timestamp) => {
   }
 };
 
-
 // =====================================================
 // ORDER CARD
 // =====================================================
@@ -166,85 +163,56 @@ const OrderCard = ({
   onVerifyPayment,
   onRejectPayment,
 }) => {
-
   const isWaiterOrder =
     order.orderSource === "waiter";
 
   const isOnlineOrder =
     order.orderSource !== "waiter";
 
-
   const subtotal =
     Number(order.subtotal) ||
     Number(order.total) ||
     0;
 
-
   const deliveryFee =
     Number(order.deliveryFee) || 0;
-
 
   const total =
     Number(order.total) ||
     subtotal;
 
-
   const status =
     statusConfig[order.orderStatus] ||
     statusConfig.pending;
 
-
   return (
     <div className="bg-white rounded-2xl border border-[#E4E0D7] shadow-sm overflow-hidden">
-
-
-      {/* =====================================================
-          HEADER
-      ===================================================== */}
+      {/* HEADER */}
       <div className="p-5 border-b border-[#E4E0D7]">
-
         <div className="flex flex-wrap items-start justify-between gap-3">
-
           <div>
-
             <div className="flex flex-wrap items-center gap-2">
-
               <span className="text-sm font-bold text-[#252525]">
                 Order #{order.id.slice(0, 8)}
               </span>
 
-
               {isWaiterOrder ? (
-
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-[#F7F5EF] border border-[#D8D5CC] text-xs font-semibold text-[#77705F]">
-
                   <FaUserTie size={10} />
-
                   Waiter Order
-
                 </span>
-
               ) : (
-
                 <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-pink-50 border border-pink-100 text-xs font-semibold text-pink-600">
-
                   <FaMobileAlt size={10} />
-
                   Online Order
-
                 </span>
-
               )}
-
             </div>
-
 
             <p className="mt-1 text-xs text-[#8A806B]">
               {formatDate(order.createdAt)}
             </p>
-
           </div>
-
 
           <span
             className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs font-bold ${status.className}`}
@@ -252,32 +220,21 @@ const OrderCard = ({
             {status.icon}
             {status.label}
           </span>
-
         </div>
-
       </div>
 
-
-      {/* =====================================================
-          CUSTOMER / WAITER INFO
-      ===================================================== */}
+      {/* CUSTOMER / WAITER INFO */}
       <div className="p-5 border-b border-[#E4E0D7]">
-
         {isWaiterOrder ? (
-
           <div className="flex items-center gap-3">
-
             <div className="w-11 h-11 rounded-xl bg-[#F7F5EF] flex items-center justify-center">
-
               <FaUserTie
                 className="text-[#A08E65]"
                 size={18}
               />
-
             </div>
 
             <div>
-
               <p className="font-bold text-[#252525]">
                 Waiter Order
               </p>
@@ -285,24 +242,16 @@ const OrderCard = ({
               <p className="text-xs text-[#8A806B]">
                 Recorded from waiter panel
               </p>
-
             </div>
-
           </div>
-
         ) : (
-
           <div>
-
             <h3 className="text-sm font-bold text-[#252525] mb-3">
               Customer Information
             </h3>
 
-
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-
               <div>
-
                 <p className="text-xs text-[#8A806B]">
                   Name
                 </p>
@@ -310,12 +259,9 @@ const OrderCard = ({
                 <p className="text-sm font-semibold text-[#252525]">
                   {order.customer?.name || "N/A"}
                 </p>
-
               </div>
 
-
               <div>
-
                 <p className="text-xs text-[#8A806B]">
                   Phone
                 </p>
@@ -323,14 +269,10 @@ const OrderCard = ({
                 <p className="text-sm font-semibold text-[#252525]">
                   {order.customer?.phone || "N/A"}
                 </p>
-
               </div>
 
-
               {order.customer?.email && (
-
                 <div>
-
                   <p className="text-xs text-[#8A806B]">
                     Email
                   </p>
@@ -338,14 +280,10 @@ const OrderCard = ({
                   <p className="text-sm font-semibold text-[#252525] break-all">
                     {order.customer.email}
                   </p>
-
                 </div>
-
               )}
 
-
               <div className="sm:col-span-2">
-
                 <p className="text-xs text-[#8A806B]">
                   Address
                 </p>
@@ -353,27 +291,16 @@ const OrderCard = ({
                 <p className="text-sm font-semibold text-[#252525]">
                   {order.customer?.address || "N/A"}
                 </p>
-
               </div>
-
             </div>
-
           </div>
-
         )}
-
       </div>
 
-
-      {/* =====================================================
-          ONLINE PAYMENT
-      ===================================================== */}
+      {/* ONLINE PAYMENT */}
       {isOnlineOrder && (
-
         <div className="p-5 border-b border-[#E4E0D7]">
-
           <div className="flex items-center gap-2 mb-4">
-
             <FaMobileAlt
               className="text-pink-500"
               size={16}
@@ -382,15 +309,10 @@ const OrderCard = ({
             <h3 className="font-bold text-[#252525]">
               bKash Payment
             </h3>
-
           </div>
 
-
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
-
             <div className="bg-[#F7F5EF] rounded-xl p-4">
-
               <p className="text-xs text-[#8A806B]">
                 Payment Status
               </p>
@@ -398,12 +320,9 @@ const OrderCard = ({
               <p className="mt-1 font-bold text-[#252525] capitalize">
                 {order.paymentStatus || "pending"}
               </p>
-
             </div>
 
-
             <div className="bg-[#F7F5EF] rounded-xl p-4">
-
               <p className="text-xs text-[#8A806B]">
                 Customer Paid
               </p>
@@ -411,43 +330,31 @@ const OrderCard = ({
               <p className="mt-1 text-xl font-extrabold text-[#252525]">
                 ৳
                 {Number(
-                  order.paymentAmount ||
-                    order.total
+                  order.paymentAmount || order.total
                 )}
               </p>
-
             </div>
 
-
             <div className="sm:col-span-2 bg-pink-50 border border-pink-100 rounded-xl p-4">
-
               <p className="text-xs text-pink-600 font-semibold">
                 bKash Transaction ID
               </p>
 
               <p className="mt-1 text-lg font-extrabold text-[#252525] tracking-wide break-all">
-                {order.transactionId ||
-                  "Not provided"}
+                {order.transactionId || "Not provided"}
               </p>
-
             </div>
-
           </div>
 
-
           {order.paymentStatus === "submitted" && (
-
             <div className="mt-4 bg-amber-50 border border-amber-200 rounded-xl p-4">
-
               <div className="flex gap-3">
-
                 <FaShieldAlt
                   className="text-amber-600 mt-0.5 shrink-0"
                   size={16}
                 />
 
                 <div>
-
                   <p className="text-sm font-bold text-amber-800">
                     Manual verification required
                   </p>
@@ -458,130 +365,82 @@ const OrderCard = ({
                     Transaction ID and amount match before
                     confirming this order.
                   </p>
-
                 </div>
-
               </div>
-
             </div>
-
           )}
-
 
           {order.paymentStatus === "submitted" && (
-
             <div className="mt-4 flex flex-col sm:flex-row gap-3">
-
               <button
                 type="button"
-                onClick={() =>
-                  onVerifyPayment(order)
-                }
+                onClick={() => onVerifyPayment(order)}
                 className="flex-1 h-11 rounded-xl bg-green-600 text-white font-bold flex items-center justify-center gap-2 hover:bg-green-700 transition"
               >
-
                 <FaCheckCircle />
-
                 Verify bKash Payment
-
               </button>
-
 
               <button
                 type="button"
-                onClick={() =>
-                  onRejectPayment(order)
-                }
+                onClick={() => onRejectPayment(order)}
                 className="sm:w-32 h-11 rounded-xl border border-red-200 text-red-600 font-bold flex items-center justify-center gap-2 hover:bg-red-50 transition"
               >
-
                 <FaTimesCircle />
-
                 Reject
-
               </button>
-
             </div>
-
           )}
 
-
           {order.paymentStatus === "paid" && (
-
             <div className="mt-4 flex items-center gap-2 px-4 py-3 rounded-xl bg-green-50 border border-green-200 text-green-700">
-
               <FaCheckCircle />
 
               <span className="text-sm font-bold">
                 bKash payment verified
               </span>
-
             </div>
-
           )}
 
-
           {order.paymentStatus === "failed" && (
-
             <div className="mt-4 px-4 py-3 rounded-xl bg-red-50 border border-red-200 text-red-700">
-
               <div className="flex items-center gap-2">
-
                 <FaTimesCircle />
 
                 <span className="text-sm font-bold">
                   Payment rejected
                 </span>
-
               </div>
 
-
               {order.paymentRejectionReason && (
-
                 <p className="mt-2 text-xs">
-                  Reason:{" "}
-                  {order.paymentRejectionReason}
+                  Reason: {order.paymentRejectionReason}
                 </p>
-
               )}
-
             </div>
-
           )}
-
         </div>
-
       )}
 
-
-      {/* =====================================================
-          ORDER ITEMS
-      ===================================================== */}
+      {/* ORDER ITEMS */}
       <div className="p-5 border-b border-[#E4E0D7]">
-
         <h3 className="text-sm font-bold text-[#252525] mb-4">
           Ordered Items
         </h3>
 
-
         <div className="space-y-3">
-
           {order.items?.map((item, index) => (
-
             <div
               key={`${item.id}-${index}`}
               className="flex items-center gap-3"
             >
-
               <img
                 src={item.image}
                 alt={item.name}
                 className="w-14 h-14 rounded-lg object-cover"
               />
 
-
               <div className="flex-1 min-w-0">
-
                 <p className="font-semibold text-sm text-[#252525] truncate">
                   {item.name}
                 </p>
@@ -589,46 +448,29 @@ const OrderCard = ({
                 <p className="text-xs text-[#8A806B]">
                   ৳{item.price} × {item.quantity}
                 </p>
-
               </div>
-
 
               <p className="font-bold text-sm text-[#252525]">
                 ৳
                 {Number(item.price) *
                   Number(item.quantity)}
               </p>
-
             </div>
-
           ))}
-
         </div>
-
       </div>
 
-
-      {/* =====================================================
-          CONTROL PANEL
-      ===================================================== */}
+      {/* CONTROL PANEL */}
       <div className="p-5 border-b border-[#E4E0D7]">
-
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-
-
           {isWaiterOrder && (
-
             <div>
-
               <label className="block text-xs font-bold text-[#77705F] mb-2">
                 Payment Status
               </label>
 
               <select
-                value={
-                  order.paymentStatus ||
-                  "paid"
-                }
+                value={order.paymentStatus || "paid"}
                 onChange={(e) =>
                   onUpdatePaymentStatus(
                     order.id,
@@ -637,41 +479,21 @@ const OrderCard = ({
                 }
                 className="w-full h-10 px-3 rounded-xl border border-[#D8D5CC] bg-white text-sm font-semibold outline-none"
               >
-
-                <option value="pending">
-                  Pending
-                </option>
-
-                <option value="paid">
-                  Paid
-                </option>
-
-                <option value="failed">
-                  Failed
-                </option>
-
-                <option value="refunded">
-                  Refunded
-                </option>
-
+                <option value="pending">Pending</option>
+                <option value="paid">Paid</option>
+                <option value="failed">Failed</option>
+                <option value="refunded">Refunded</option>
               </select>
-
             </div>
-
           )}
 
-
           <div>
-
             <label className="block text-xs font-bold text-[#77705F] mb-2">
               Order Status
             </label>
 
             <select
-              value={
-                order.orderStatus ||
-                "pending"
-              }
+              value={order.orderStatus || "pending"}
               onChange={(e) =>
                 onUpdateOrderStatus(
                   order,
@@ -680,10 +502,8 @@ const OrderCard = ({
               }
               className="w-full h-10 px-3 rounded-xl border border-[#D8D5CC] bg-white text-sm font-semibold outline-none"
             >
-
               {isOnlineOrder &&
               order.paymentStatus !== "paid" ? (
-
                 <>
                   <option value="pending_payment_verification">
                     Payment Verification
@@ -693,59 +513,26 @@ const OrderCard = ({
                     Cancelled
                   </option>
                 </>
-
               ) : (
-
                 <>
-                  <option value="pending">
-                    Pending
-                  </option>
-
-                  <option value="confirmed">
-                    Confirmed
-                  </option>
-
-                  <option value="preparing">
-                    Preparing
-                  </option>
-
-                  <option value="ready">
-                    Ready
-                  </option>
-
-                  <option value="delivered">
-                    Delivered
-                  </option>
-
-                  <option value="completed">
-                    Completed
-                  </option>
-
-                  <option value="cancelled">
-                    Cancelled
-                  </option>
+                  <option value="pending">Pending</option>
+                  <option value="confirmed">Confirmed</option>
+                  <option value="preparing">Preparing</option>
+                  <option value="ready">Ready</option>
+                  <option value="delivered">Delivered</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
                 </>
-
               )}
-
             </select>
-
           </div>
-
         </div>
-
       </div>
 
-
-      {/* =====================================================
-          PRICE SUMMARY
-      ===================================================== */}
+      {/* PRICE SUMMARY */}
       <div className="p-5">
-
         <div className="space-y-2">
-
           <div className="flex justify-between text-sm">
-
             <span className="text-[#8A806B]">
               Subtotal
             </span>
@@ -753,14 +540,10 @@ const OrderCard = ({
             <span className="font-semibold">
               ৳{subtotal}
             </span>
-
           </div>
 
-
           {deliveryFee > 0 && (
-
             <div className="flex justify-between text-sm">
-
               <span className="text-[#8A806B]">
                 Delivery Fee
               </span>
@@ -768,14 +551,10 @@ const OrderCard = ({
               <span className="font-semibold">
                 ৳{deliveryFee}
               </span>
-
             </div>
-
           )}
 
-
           <div className="border-t border-[#E4E0D7] pt-3 flex justify-between">
-
             <span className="font-bold text-[#252525]">
               Total
             </span>
@@ -783,16 +562,11 @@ const OrderCard = ({
             <span className="text-xl font-extrabold text-[#252525]">
               ৳{total}
             </span>
-
           </div>
-
         </div>
 
-
         {order.note && (
-
           <div className="mt-4 bg-[#F7F5EF] rounded-xl p-4">
-
             <p className="text-xs font-bold text-[#77705F]">
               Customer Note
             </p>
@@ -800,86 +574,53 @@ const OrderCard = ({
             <p className="mt-1 text-sm text-[#252525]">
               {order.note}
             </p>
-
           </div>
-
         )}
-
       </div>
-
     </div>
   );
 };
-
 
 // =====================================================
 // MAIN ORDERS PAGE
 // =====================================================
 const Orders = () => {
-
   const { user } = useAuth();
 
   const [orders, setOrders] = useState([]);
-
   const [loading, setLoading] = useState(true);
 
-
-  // =====================================================
   // REAL-TIME ALL ORDERS
-  // =====================================================
   useEffect(() => {
-
     const ordersQuery = query(
       collection(db, "orders"),
       orderBy("createdAt", "desc")
     );
 
-
     const unsubscribe = onSnapshot(
       ordersQuery,
-
       (snapshot) => {
-
-        const orderList =
-          snapshot.docs.map(
-            (docSnapshot) => ({
-              id: docSnapshot.id,
-              ...docSnapshot.data(),
-            })
-          );
-
-
-        setOrders(orderList);
-
-        setLoading(false);
-      },
-
-
-      (error) => {
-
-        console.error(
-          "Error loading orders:",
-          error
+        const orderList = snapshot.docs.map(
+          (docSnapshot) => ({
+            id: docSnapshot.id,
+            ...docSnapshot.data(),
+          })
         );
 
+        setOrders(orderList);
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Error loading orders:", error);
         setLoading(false);
       }
     );
 
-
     return () => unsubscribe();
-
   }, []);
 
-
-  // =====================================================
   // UPDATE ORDER STATUS
-  // =====================================================
-  const updateOrderStatus = async (
-    order,
-    newStatus
-  ) => {
-
+  const updateOrderStatus = async (order, newStatus) => {
     if (
       order.orderSource !== "waiter" &&
       order.paymentStatus !== "paid" &&
@@ -891,558 +632,313 @@ const Orders = () => {
         "completed",
       ].includes(newStatus)
     ) {
-
-      alert(
-        "Please verify the bKash payment first."
-      );
-
+      alert("Please verify the bKash payment first.");
       return;
     }
 
-
     try {
-
-      await updateDoc(
-        doc(db, "orders", order.id),
-        {
-          orderStatus: newStatus,
-          updatedAt: serverTimestamp(),
-        }
-      );
-
+      await updateDoc(doc(db, "orders", order.id), {
+        orderStatus: newStatus,
+        updatedAt: serverTimestamp(),
+      });
     } catch (error) {
-
-      console.error(
-        "Error updating order:",
-        error
-      );
-
-      alert(
-        "Failed to update order status."
-      );
+      console.error("Error updating order:", error);
+      alert("Failed to update order status.");
     }
   };
 
-
-  // =====================================================
   // UPDATE WAITER PAYMENT STATUS
-  // =====================================================
-  const updatePaymentStatus = async (
-    orderId,
-    newStatus
-  ) => {
-
+  const updatePaymentStatus = async (orderId, newStatus) => {
     try {
-
-      await updateDoc(
-        doc(db, "orders", orderId),
-        {
-          paymentStatus: newStatus,
-          updatedAt: serverTimestamp(),
-        }
-      );
-
+      await updateDoc(doc(db, "orders", orderId), {
+        paymentStatus: newStatus,
+        updatedAt: serverTimestamp(),
+      });
     } catch (error) {
-
-      console.error(
-        "Error updating payment:",
-        error
-      );
-
-      alert(
-        "Failed to update payment status."
-      );
+      console.error("Error updating payment:", error);
+      alert("Failed to update payment status.");
     }
   };
 
-
-  // =====================================================
   // VERIFY BKASH PAYMENT
-  // =====================================================
   const verifyBkashPayment = async (order) => {
-
     const confirmed = window.confirm(
       `Have you checked your actual bKash transaction history and confirmed that:\n\nTransaction ID: ${order.transactionId}\nAmount: ৳${order.paymentAmount || order.total}\n\nmatches your bKash transaction?`
     );
-
 
     if (!confirmed) {
       return;
     }
 
-
     try {
-
-      await updateDoc(
-        doc(db, "orders", order.id),
-        {
-
-          paymentStatus: "paid",
-
-          orderStatus: "confirmed",
-
-          paymentVerifiedAt:
-            serverTimestamp(),
-
-          paymentVerifiedBy:
-            user?.uid || "",
-
-          updatedAt:
-            serverTimestamp(),
-
-        }
-      );
-
+      await updateDoc(doc(db, "orders", order.id), {
+        paymentStatus: "paid",
+        orderStatus: "confirmed",
+        paymentVerifiedAt: serverTimestamp(),
+        paymentVerifiedBy: user?.uid || "",
+        updatedAt: serverTimestamp(),
+      });
 
       alert(
         "bKash payment verified successfully. Order confirmed."
       );
-
     } catch (error) {
-
-      console.error(
-        "Error verifying payment:",
-        error
-      );
-
-      alert(
-        "Failed to verify payment."
-      );
+      console.error("Error verifying payment:", error);
+      alert("Failed to verify payment.");
     }
   };
 
-
-  // =====================================================
   // REJECT BKASH PAYMENT
-  // =====================================================
   const rejectBkashPayment = async (order) => {
-
-    const reason =
-      window.prompt(
-        "Why are you rejecting this payment?\n\nExample: Transaction ID or amount did not match.",
-        "Transaction ID or amount did not match."
-      );
-
+    const reason = window.prompt(
+      "Why are you rejecting this payment?\n\nExample: Transaction ID or amount did not match.",
+      "Transaction ID or amount did not match."
+    );
 
     if (reason === null) {
       return;
     }
 
-
     try {
+      await updateDoc(doc(db, "orders", order.id), {
+        paymentStatus: "failed",
+        orderStatus: "cancelled",
+        paymentRejectedAt: serverTimestamp(),
+        paymentRejectedBy: user?.uid || "",
+        paymentRejectionReason: reason.trim(),
+        updatedAt: serverTimestamp(),
+      });
 
-      await updateDoc(
-        doc(db, "orders", order.id),
-        {
-
-          paymentStatus: "failed",
-
-          orderStatus: "cancelled",
-
-          paymentRejectedAt:
-            serverTimestamp(),
-
-          paymentRejectedBy:
-            user?.uid || "",
-
-          paymentRejectionReason:
-            reason.trim(),
-
-          updatedAt:
-            serverTimestamp(),
-
-        }
-      );
-
-
-      alert(
-        "Payment rejected and order cancelled."
-      );
-
+      alert("Payment rejected and order cancelled.");
     } catch (error) {
-
-      console.error(
-        "Error rejecting payment:",
-        error
-      );
-
-      alert(
-        "Failed to reject payment."
-      );
+      console.error("Error rejecting payment:", error);
+      alert("Failed to reject payment.");
     }
   };
 
-
-  // =====================================================
   // TODAY'S ORDERS ONLY
-  // =====================================================
   const todayOrders = useMemo(() => {
-
-    return orders.filter(
-      (order) =>
-        isToday(order.createdAt)
+    return orders.filter((order) =>
+      isToday(order.createdAt)
     );
-
   }, [orders]);
 
-
-  // =====================================================
   // TODAY WAITER ORDERS
-  // =====================================================
   const todayWaiterOrders = useMemo(() => {
-
     return todayOrders.filter(
-      (order) =>
-        order.orderSource === "waiter"
+      (order) => order.orderSource === "waiter"
     );
-
   }, [todayOrders]);
 
-
-  // =====================================================
   // TODAY ONLINE ORDERS
-  // =====================================================
   const todayOnlineOrders = useMemo(() => {
-
     return todayOrders.filter(
-      (order) =>
-        order.orderSource !== "waiter"
+      (order) => order.orderSource !== "waiter"
     );
-
   }, [todayOrders]);
 
-
-  // =====================================================
   // TODAY PENDING
-  // =====================================================
   const pendingCount = useMemo(() => {
-
     return todayOrders.filter(
       (order) =>
         order.orderStatus === "pending" ||
-        order.orderStatus ===
-          "pending_payment_verification"
+        order.orderStatus === "pending_payment_verification"
     ).length;
-
   }, [todayOrders]);
 
-
-  // =====================================================
   // TODAY CONFIRMED
-  // =====================================================
   const confirmedCount = useMemo(() => {
-
     return todayOrders.filter(
-      (order) =>
-        order.orderStatus === "confirmed"
+      (order) => order.orderStatus === "confirmed"
     ).length;
-
   }, [todayOrders]);
 
-
-  // =====================================================
   // TODAY PREPARING
-  // =====================================================
   const preparingCount = useMemo(() => {
-
     return todayOrders.filter(
-      (order) =>
-        order.orderStatus === "preparing"
+      (order) => order.orderStatus === "preparing"
     ).length;
-
   }, [todayOrders]);
 
-
-  // =====================================================
   // TODAY READY
-  // =====================================================
   const readyCount = useMemo(() => {
-
     return todayOrders.filter(
-      (order) =>
-        order.orderStatus === "ready"
+      (order) => order.orderStatus === "ready"
     ).length;
-
   }, [todayOrders]);
 
-
-  // =====================================================
   // TODAY PAYMENT VERIFICATION
-  // =====================================================
-  const paymentVerificationCount =
-    useMemo(() => {
+  const paymentVerificationCount = useMemo(() => {
+    return todayOrders.filter(
+      (order) => order.paymentStatus === "submitted"
+    ).length;
+  }, [todayOrders]);
 
-      return todayOrders.filter(
-        (order) =>
-          order.paymentStatus ===
-          "submitted"
-      ).length;
-
-    }, [todayOrders]);
-
-
-  // =====================================================
   // TODAY WAITER SALES
-  // =====================================================
-  const todayWaiterSales =
-    useMemo(() => {
+  const todayWaiterSales = useMemo(() => {
+    return todayWaiterOrders.reduce(
+      (total, order) =>
+        total + Number(order.total || 0),
+      0
+    );
+  }, [todayWaiterOrders]);
 
-      return todayWaiterOrders.reduce(
+  // TODAY TOTAL SALES
+  const todayTotalSales = useMemo(() => {
+    return todayOrders
+      .filter(
+        (order) =>
+          order.paymentStatus === "paid" &&
+          order.orderStatus !== "cancelled"
+      )
+      .reduce(
         (total, order) =>
-          total +
-          Number(order.total || 0),
+          total + Number(order.total || 0),
         0
       );
+  }, [todayOrders]);
 
-    }, [todayWaiterOrders]);
-
-
-  // =====================================================
-  // TODAY TOTAL SALES
-  // =====================================================
-  const todayTotalSales =
-    useMemo(() => {
-
-      return todayOrders
-        .filter(
-          (order) =>
-            order.paymentStatus ===
-              "paid" &&
-            order.orderStatus !==
-              "cancelled"
-        )
-        .reduce(
-          (total, order) =>
-            total +
-            Number(order.total || 0),
-          0
-        );
-
-    }, [todayOrders]);
-
-
-  // =====================================================
   // LOADING
-  // =====================================================
   if (loading) {
-
     return (
-
       <div className="min-h-screen bg-[#F7F5EF] flex items-center justify-center">
-
         <div className="text-center">
-
           <span className="loading loading-spinner loading-lg text-[#252525]"></span>
 
           <p className="mt-3 text-sm text-[#8A806B]">
             Loading today's orders...
           </p>
-
         </div>
-
       </div>
-
     );
   }
 
-
   return (
-
     <div className="min-h-screen bg-[#F7F5EF] py-8 sm:py-10">
-
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        {/* HEADER — Discount button added */}
+        <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl sm:text-4xl font-extrabold text-[#252525]">
+              Today's Orders
+            </h1>
 
+            <p className="mt-2 text-[#8A806B]">
+              Only today's online and waiter orders are shown here.
+            </p>
+          </div>
 
-        {/* =====================================================
-            HEADER
-        ===================================================== */}
-        <div className="mb-8">
-
-          <h1 className="text-3xl sm:text-4xl font-extrabold text-[#252525]">
-            Today's Orders
-          </h1>
-
-          <p className="mt-2 text-[#8A806B]">
-            Only today's online and waiter orders are shown here.
-          </p>
-
+          <Link
+            to="/admin/products"
+            className="inline-flex items-center gap-2 rounded-xl bg-[#A08E65] px-5 py-3 font-bold text-white transition hover:bg-[#88764F]"
+          >
+            🏷️ Manage Discounts
+          </Link>
         </div>
 
-
-        {/* =====================================================
-            MAIN STATS
-        ===================================================== */}
+        {/* MAIN STATS */}
         <div className="grid grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
-
-
           <div className="bg-white rounded-2xl border border-[#E4E0D7] p-5">
-
-            <p className="text-xs text-[#8A806B]">
-              Pending
-            </p>
-
+            <p className="text-xs text-[#8A806B]">Pending</p>
             <p className="mt-1 text-2xl font-extrabold text-[#252525]">
               {pendingCount}
             </p>
-
           </div>
 
-
           <div className="bg-white rounded-2xl border border-[#E4E0D7] p-5">
-
             <p className="text-xs text-[#8A806B]">
               Payment Verification
             </p>
-
             <p className="mt-1 text-2xl font-extrabold text-amber-600">
               {paymentVerificationCount}
             </p>
-
           </div>
 
-
           <div className="bg-white rounded-2xl border border-[#E4E0D7] p-5">
-
-            <p className="text-xs text-[#8A806B]">
-              Confirmed
-            </p>
-
+            <p className="text-xs text-[#8A806B]">Confirmed</p>
             <p className="mt-1 text-2xl font-extrabold text-blue-600">
               {confirmedCount}
             </p>
-
           </div>
 
-
           <div className="bg-white rounded-2xl border border-[#E4E0D7] p-5">
-
-            <p className="text-xs text-[#8A806B]">
-              Preparing
-            </p>
-
+            <p className="text-xs text-[#8A806B]">Preparing</p>
             <p className="mt-1 text-2xl font-extrabold text-purple-600">
               {preparingCount}
             </p>
-
           </div>
 
-
           <div className="bg-white rounded-2xl border border-[#E4E0D7] p-5">
-
-            <p className="text-xs text-[#8A806B]">
-              Ready
-            </p>
-
+            <p className="text-xs text-[#8A806B]">Ready</p>
             <p className="mt-1 text-2xl font-extrabold text-green-600">
               {readyCount}
             </p>
-
           </div>
-
         </div>
 
-
-        {/* =====================================================
-            BUSINESS STATS
-        ===================================================== */}
+        {/* BUSINESS STATS */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-
-
           <div className="bg-white rounded-2xl border border-[#E4E0D7] p-5">
-
             <div className="flex items-center justify-between">
-
               <div>
-
                 <p className="text-xs text-[#8A806B]">
                   Today's Total Sales
                 </p>
-
                 <p className="mt-1 text-2xl font-extrabold text-[#252525]">
                   ৳{todayTotalSales}
                 </p>
-
               </div>
 
               <FaMoneyBillWave
                 className="text-[#A08E65]"
                 size={24}
               />
-
             </div>
-
           </div>
 
-
           <div className="bg-white rounded-2xl border border-[#E4E0D7] p-5">
-
             <div className="flex items-center justify-between">
-
               <div>
-
                 <p className="text-xs text-[#8A806B]">
                   Today's Waiter Sales
                 </p>
-
                 <p className="mt-1 text-2xl font-extrabold text-[#252525]">
                   ৳{todayWaiterSales}
                 </p>
-
               </div>
 
               <FaUserTie
                 className="text-[#A08E65]"
                 size={24}
               />
-
             </div>
-
           </div>
 
-
           <div className="bg-white rounded-2xl border border-[#E4E0D7] p-5">
-
             <div className="flex items-center justify-between">
-
               <div>
-
                 <p className="text-xs text-[#8A806B]">
                   Today's Online Orders
                 </p>
-
                 <p className="mt-1 text-2xl font-extrabold text-[#252525]">
                   {todayOnlineOrders.length}
                 </p>
-
               </div>
 
               <FaMobileAlt
                 className="text-pink-500"
                 size={24}
               />
-
             </div>
-
           </div>
-
         </div>
 
-
-        {/* =====================================================
-            TODAY'S ORDERS
-        ===================================================== */}
+        {/* TODAY'S ORDERS */}
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-
-
-          {/* =====================================================
-              TODAY WAITER ORDERS
-          ===================================================== */}
+          {/* TODAY WAITER ORDERS */}
           <div>
-
             <div className="flex items-center justify-between mb-4">
-
               <div>
-
                 <h2 className="text-xl font-extrabold text-[#252525]">
                   Today's Waiter Orders
                 </h2>
@@ -1450,21 +946,15 @@ const Orders = () => {
                 <p className="text-sm text-[#8A806B] mt-1">
                   Orders recorded by waiter today
                 </p>
-
               </div>
-
 
               <span className="px-3 py-1 rounded-full bg-white border border-[#E4E0D7] text-sm font-bold">
                 {todayWaiterOrders.length}
               </span>
-
             </div>
 
-
             {todayWaiterOrders.length === 0 ? (
-
               <div className="bg-white rounded-2xl border border-[#E4E0D7] p-10 text-center">
-
                 <FaUserTie
                   className="mx-auto text-[#C8C2B5]"
                   size={32}
@@ -1473,52 +963,27 @@ const Orders = () => {
                 <p className="mt-3 font-semibold text-[#252525]">
                   No waiter orders today.
                 </p>
-
               </div>
-
             ) : (
-
               <div className="space-y-5">
-
-                {todayWaiterOrders.map(
-                  (order) => (
-
-                    <OrderCard
-                      key={order.id}
-                      order={order}
-                      onUpdateOrderStatus={
-                        updateOrderStatus
-                      }
-                      onUpdatePaymentStatus={
-                        updatePaymentStatus
-                      }
-                      onVerifyPayment={
-                        verifyBkashPayment
-                      }
-                      onRejectPayment={
-                        rejectBkashPayment
-                      }
-                    />
-
-                  )
-                )}
-
+                {todayWaiterOrders.map((order) => (
+                  <OrderCard
+                    key={order.id}
+                    order={order}
+                    onUpdateOrderStatus={updateOrderStatus}
+                    onUpdatePaymentStatus={updatePaymentStatus}
+                    onVerifyPayment={verifyBkashPayment}
+                    onRejectPayment={rejectBkashPayment}
+                  />
+                ))}
               </div>
-
             )}
-
           </div>
 
-
-          {/* =====================================================
-              TODAY ONLINE ORDERS
-          ===================================================== */}
+          {/* TODAY ONLINE ORDERS */}
           <div>
-
             <div className="flex items-center justify-between mb-4">
-
               <div>
-
                 <h2 className="text-xl font-extrabold text-[#252525]">
                   Today's Online Orders
                 </h2>
@@ -1526,21 +991,15 @@ const Orders = () => {
                 <p className="text-sm text-[#8A806B] mt-1">
                   bKash advance payment orders today
                 </p>
-
               </div>
-
 
               <span className="px-3 py-1 rounded-full bg-pink-50 border border-pink-100 text-sm font-bold text-pink-600">
                 {todayOnlineOrders.length}
               </span>
-
             </div>
 
-
             {todayOnlineOrders.length === 0 ? (
-
               <div className="bg-white rounded-2xl border border-[#E4E0D7] p-10 text-center">
-
                 <FaMobileAlt
                   className="mx-auto text-[#C8C2B5]"
                   size={32}
@@ -1549,48 +1008,25 @@ const Orders = () => {
                 <p className="mt-3 font-semibold text-[#252525]">
                   No online orders today.
                 </p>
-
               </div>
-
             ) : (
-
               <div className="space-y-5">
-
-                {todayOnlineOrders.map(
-                  (order) => (
-
-                    <OrderCard
-                      key={order.id}
-                      order={order}
-                      onUpdateOrderStatus={
-                        updateOrderStatus
-                      }
-                      onUpdatePaymentStatus={
-                        updatePaymentStatus
-                      }
-                      onVerifyPayment={
-                        verifyBkashPayment
-                      }
-                      onRejectPayment={
-                        rejectBkashPayment
-                      }
-                    />
-
-                  )
-                )}
-
+                {todayOnlineOrders.map((order) => (
+                  <OrderCard
+                    key={order.id}
+                    order={order}
+                    onUpdateOrderStatus={updateOrderStatus}
+                    onUpdatePaymentStatus={updatePaymentStatus}
+                    onVerifyPayment={verifyBkashPayment}
+                    onRejectPayment={rejectBkashPayment}
+                  />
+                ))}
               </div>
-
             )}
-
           </div>
-
         </div>
-
       </div>
-
     </div>
-
   );
 };
 
